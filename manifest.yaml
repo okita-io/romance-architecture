@@ -1,0 +1,40 @@
+# Romance Project manifest — the repos that make up the system.
+#
+# This is the lightweight alternative to git submodules: it records where each
+# system lives and (optionally) the last-known-good commit that was verified to
+# be contract-compatible with the others. Update `known_good_commit` at releases.
+#
+# NOTE: per-story reproducibility (which model/adapter/card wrote a chapter) is
+# NOT solved here — that lives in the data. See docs/PROVENANCE.md.
+
+version: 1
+
+layout:
+  # All repos are expected as siblings in the same parent directory.
+  root: ..
+
+repos:
+  romance-training:
+    role: training            # judge / editor / writer models
+    remote: git@github.com:okita-io/romance-training.git
+    default_branch: master
+    known_good_commit: null   # e.g. RT commit verified compatible with the tuple below
+
+  romance-factory:
+    role: harness             # runs models, produces story bundles
+    remote: git@github.com:okita-io/romance-factory.git
+    default_branch: main
+    known_good_commit: null
+
+  midnight-satin:
+    role: frontend            # reader web app (Vercel / Neon)
+    remote: null              # TODO: set the GitHub remote used by Vercel git integration
+    default_branch: main
+    known_good_commit: null
+
+  romance-editor:
+    role: legacy-editor       # overlaps romance-training; consolidation pending
+    remote: null              # local-only today
+    default_branch: main
+    known_good_commit: null
+    status: review            # decide: merge into RT editor, or keep distinct
