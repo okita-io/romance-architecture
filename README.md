@@ -11,7 +11,7 @@ Start here: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 | **romance-training** (RT) | Trains the models — judge, editor, writer | Gemma 4 MoE on DGX Spark; ships artifacts + contracts |
 | **romance-factory** (RF) | Harness — runs models, drafts→grades→revises→merges books | Produces story bundles |
 | **midnight-satin** (MS) | Frontend — readers read, unlock, review, comment | Next.js / Vercel / Neon; captures reader signal |
-| **romance-editor** | Earlier Qwen3-8B editor; **overlaps RT** | Consolidation decision pending (see ARCHITECTURE.md) |
+| **romance-editor** _(retired)_ | Superseded — editor folded into RT | Editor + writer share RT's style-classification data |
 
 ```
 RT ──(models + card schema + rubric)──▶ RF ──(story bundle + assets)──▶ MS ──▶ readers

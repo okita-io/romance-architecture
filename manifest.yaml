@@ -33,8 +33,8 @@ repos:
     known_good_commit: null
 
   romance-editor:
-    role: legacy-editor       # overlaps romance-training; consolidation pending
-    remote: null              # local-only today
+    role: retired             # superseded: editor stays in romance-training
+    remote: null              # local-only; historical reference only
     default_branch: main
     known_good_commit: null
-    status: review            # decide: merge into RT editor, or keep distinct
+    status: retired           # decision Jul 2026 — editor+writer share RT's style-classification data

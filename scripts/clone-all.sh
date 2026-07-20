@@ -13,7 +13,7 @@ REPOS=(
   "romance-training	git@github.com:okita-io/romance-training.git"
   "romance-factory	git@github.com:okita-io/romance-factory.git"
   "midnight-satin	-"
-  "romance-editor	-"
+  # romance-editor: retired (superseded; editor lives in romance-training)
 )
 
 for entry in "${REPOS[@]}"; do

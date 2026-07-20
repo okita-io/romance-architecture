@@ -23,9 +23,13 @@ This repo owns **no runtime code**. It owns the *map*, the *cross-cutting contra
 
 Governing rule: **judge, editor, and writer are separate training products.** Never overwrite one checkpoint with another's data, and keep the referee judge held out from the writer's reward loop.
 
-### Open question — the fourth repo
+### Resolved — romance-editor is superseded
 
-**romance-editor** is a fourth sibling repo: an earlier/parallel Qwen3-8B QLoRA "romance fiction editor" trained on the *same* Style-in-Fiction source, local-only, sized for a single 3090. It **overlaps RT's editor track**. Decision needed: **consolidate** it into RT's editor product, or keep it as a distinct lightweight editor with a defined boundary. Until resolved, treat it as a candidate for merge, not a fourth pillar.
+**romance-editor** was an early attempt to isolate the editing model as its own product (Qwen3-8B QLoRA on Style-in-Fiction, single-3090 scale). **Decision (Jul 2026): abandon it; the editor stays inside romance-training.**
+
+Rationale: editing and writing are tightly interlinked, and — critically — the **Leech & Short style-classification data is shared across all three products.** The same labeled corpus that teaches the judge to score also teaches the editor to rewrite and the writer to generate on-card. Forking the editor into its own repo would fork that shared data substrate and duplicate the labeling pipeline. romance-editor is kept only as historical reference, not as a pillar of the architecture.
+
+> This is the deeper reason RT is one repo, not three: the products share a **model** base family *and* a **data** substrate (the classification labels). Keep them co-located; keep the checkpoints separate.
 
 ---
 
@@ -149,7 +153,10 @@ Provenance lives here precisely because it spans all three systems and has no si
 
 ## Open decisions
 
-1. **romance-editor:** consolidate into RT's editor product, or keep distinct? (see above)
-2. **Human-signal role:** confirm the recommended calibration-first stance vs a tighter optimization loop.
-3. **Provenance ownership:** RF stamps and carries it; does MS *store* it (schema columns) or just *retain* the RF receipt keyed by novel/chapter? (PROVENANCE.md proposes storing a minimal join key.)
-4. **Umbrella mechanics:** manifest-only (current) vs promote to git submodules if atomic historical checkout becomes necessary.
+1. **Human-signal role:** confirm the recommended calibration-first stance vs a tighter optimization loop.
+2. **Provenance ownership:** RF stamps and carries it; does MS *store* it (schema columns) or just *retain* the RF receipt keyed by novel/chapter? (PROVENANCE.md proposes storing a minimal join key.)
+3. **Umbrella mechanics:** manifest-only (current) vs promote to git submodules if atomic historical checkout becomes necessary.
+
+### Resolved
+
+- **romance-editor** (Jul 2026): superseded — editor stays in romance-training; the three products share the style-classification data substrate. See *Resolved — romance-editor is superseded* above.
