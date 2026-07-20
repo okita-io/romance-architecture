@@ -55,6 +55,17 @@ Resolution order (later wins on the knobs it sets): **base voice → act-beat co
 
 `card_id` = stable hash of the **resolved** target set. Computed by RF at resolve time and carried into provenance (see PROVENANCE.md) so reader outcomes join back to the exact resolved card.
 
+### `card_id` determinism (ARCH-1)
+
+Canonical algorithm (matches RF `card_id_from_targets`):
+
+1. Build payload `{ "rubric_version": <string or "">, "targets": <resolved targets object> }`.
+2. Serialize with `json.dumps(..., sort_keys=True, separators=(",", ":"), ensure_ascii=False)`.
+3. SHA-256 the UTF-8 bytes; take the first 16 hex chars.
+4. Emit `card_<hex16>`. Return no id when `targets` is empty/absent.
+
+Any re-derivation (RT tooling, audits) must use this exact input shape and serialization so ids agree with RF provenance.
+
 ---
 
 ## 4. Canonical schema
@@ -106,7 +117,7 @@ The editor/judge produce a **card-hit**: for each targeted knob, semantic dims s
 
 ## 7. Open items
 
-- **Persona → dims is lossy and LLM-derived.** `style_profile_from_author()` converts prose to enums; version it and record which model/prompt did the conversion, or two "same" author profiles may drift.
-- **card_id determinism.** Define the exact hash input (sorted resolved `targets` + `rubric_version`) so RF and any re-derivation agree.
+- **Persona → dims is lossy and LLM-derived.** `style_profile_from_author()` converts prose to enums; version it and record which model/prompt did the conversion, or two "same" author profiles may drift (BACKLOG RT-2).
+- ~~**card_id determinism (ARCH-1)**~~ — **Done** (§3). RF `card_id_from_targets` is the reference implementation.
 - **Grain binding.** The card attaches at the **act** (`act_number`), the base voice at the **story** (author profile). The full unit hierarchy (story → chapter → act → span → sentence) and the ids are defined in [IDENTIFIERS.md](IDENTIFIERS.md).
-- **Mind style / cohesion / lexical_complexity** appear in the rubric but not in RF's current `compute_act_style_targets` default set — decide whether the writer targets them or they stay grade-only.
+- **Mind style / cohesion / lexical_complexity** appear in the rubric but not in RF's current `compute_act_style_targets` default set — decide whether the writer targets them or they stay grade-only (BACKLOG RT-4).

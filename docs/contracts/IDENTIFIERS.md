@@ -1,6 +1,6 @@
 # Identifier & Segmentation Contract
 
-**Status:** Proposed contract (Jul 2026)
+**Status:** Adopted (Jul 2026) — `story_id` + stitch offsets shipped in RF; MS stores the join
 **Spans:** romance-training (RT) · romance-factory (RF) · midnight-satin (MS)
 **Scope:** New generations only — legacy RF `stories/` are unsupported (see [ARCHITECTURE.md → Standing conventions](../ARCHITECTURE.md#standing-conventions)).
 **Related:** [STEERING_CARD.md](STEERING_CARD.md), [PROVENANCE.md](../PROVENANCE.md), [ARCHITECTURE.md](../ARCHITECTURE.md)
@@ -31,17 +31,15 @@ story  ─▶  chapter  ─▶  act  ─▶  span  ─▶  sentence
 
 | Unit | Identifier | Stability |
 |------|-----------|-----------|
-| story | **`story_id`** (UUID, minted by RF at creation) | **GAP today** — see below |
+| story | **`story_id`** (UUID, minted by RF at creation) | **Shipped** — see below |
 | chapter | `(story_id, chapter_number)` | `chapter_number` 1..N, stable per story |
 | act | `(story_id, act_number)` | `act_number` global and ordered across the story; grouped into a chapter by `chapter_number` |
 | span | `(story_id, act_number, span_index)` | RT-internal; **store char offsets** (spans shift if re-chunked) |
 | sentence | `(story_id, act_number, sentence_index)` | RT-internal |
 
-### The `story_id` gap (the anchor)
+### The `story_id` anchor
 
-Today RF names a story only by a path/slug (`stories/<ts>_<author>_<title>`) and a `story_slug` in the publish bundle; there is **no stable UUID**, and MS mints its own `novelId` (UUID) at import. Nothing durable links an RF story to its MS novel — so reader signal cannot be joined back to the generation.
-
-**Contract:** RF mints a stable `story_id` (UUID) at story creation, writes it into the bundle (`manuscript_metadata.json` + `publish_manifest.json`), and MS stores it on the novel (`novels.rf_story_id`). Everything else in this document hangs off `story_id`. This is the cheapest, highest-leverage fix — do it first, alongside the RT version-id step from PROVENANCE.
+**Shipped (RF-1 / MS-1):** RF mints a stable `story_id` (UUID) at story creation (`ensure_story_id`), writes it into genesis + `manuscript_metadata.json` + `publish_manifest.json` (+ `provenance/story.json`), and MS stores it on the novel as `novels.rf_story_id`. MS still mints its own `novelId` at import; `rf_story_id` is the durable cross-system join. Everything else in this document hangs off `story_id`.
 
 ---
 
@@ -93,7 +91,7 @@ Without these offsets, per-chapter reader signal cannot localize to the act (and
 
 ## 6. Open items
 
-- **`story_id` minting + propagation** — the anchor gap in §2. Do first.
-- **Act numbering** — this contract assumes `act_number` is **global** across the story (consistent with RF `story_state`'s story-wide `planted_act` / `RomanceMilestone.act`) and grouped into chapters. Confirm no per-chapter act re-numbering exists in the new pipeline.
-- **Span stability** — RT chunk boundaries move if re-chunked; store char offsets and a segmentation version so span ids remain joinable.
-- **Bridge acts** — confirm bridge/transition acts get their own `act_number` (they should, so their card/provenance is addressable) rather than being merged into a neighbor at stitch time.
+- ~~**`story_id` minting + propagation**~~ — **Done** (RF-1 / MS-1).
+- **Act numbering** — this contract assumes `act_number` is **global** across the story (consistent with RF `story_state`'s story-wide `planted_act` / `RomanceMilestone.act`) and grouped into chapters. Confirm no per-chapter act re-numbering exists in the new pipeline (BACKLOG RF-3).
+- **Span stability** — RT chunk boundaries move if re-chunked; store char offsets and a segmentation version so span ids remain joinable (BACKLOG RT-3).
+- **Bridge acts** — confirm bridge/transition acts get their own `act_number` (they should, so their card/provenance is addressable) rather than being merged into a neighbor at stitch time (BACKLOG RF-3).

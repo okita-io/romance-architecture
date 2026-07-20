@@ -45,6 +45,6 @@ scripts/
 bash romance-architecture/scripts/clone-all.sh
 ```
 
-## The one thing to fix first
+## What's next
 
-The backward feedback loop is blocked by a **severed provenance chain**: reader outcomes cannot currently be joined to the model/adapter/card that produced them. That is a data-contract fix, specified in [docs/PROVENANCE.md](docs/PROVENANCE.md), and is the prerequisite for learning anything from readers.
+The RF→MS provenance handoff is **shipped** (`story_id`, `provenance/`, `rf_story_id` / `rf_provenance`). The remaining P0 identity gap is **RT-1**: stable version ids on shipped training artifacts so outcomes can be attributed to a model *version*. See [docs/BACKLOG.md](docs/BACKLOG.md) and [docs/PROVENANCE.md](docs/PROVENANCE.md).

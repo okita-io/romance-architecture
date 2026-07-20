@@ -78,7 +78,7 @@ Editor grades, judge scores, revision counts, which card + adapter produced each
 
 Reader behavior. Measures **appeal**: "do readers actually want this." Sparse, slow, noisy, confounded — but the **only non-circular signal** in the system, and the closest thing to ground truth.
 
-**Status:** the signal *tables* exist in MS's Neon schema, but there is **no export, no analytics pipeline, nothing feeding RT.** This loop is greenfield.
+**Status:** the signal *tables* exist in MS's Neon schema, and new imports can carry RF provenance (`rf_story_id` / `rf_provenance`). There is still **no export, no analytics pipeline, nothing feeding RT.** The calibration report is greenfield once RT-1 fills version stamps.
 
 ---
 
@@ -90,7 +90,7 @@ There is a **proxy hierarchy**: computable metrics → editor/judge (rubric prox
 
 Only *after* the proxies are calibrated against humans do MS-derived preferences (story A > B for the same card) become writer preference-training data — and even then, gated.
 
-> **Decision (recommended, open for revision):** treat MS human signal as **proxy-calibration + curated, de-confounded preference data**, *not* a tight direct-optimization reward. Rationale: the provenance chain is currently severed (below) and the signal is confounded by featuring/paywalls — neither is safe to close a tight loop through. Revisit once provenance is fixed and confounds are controlled.
+> **Decision (DEC-1, Jul 2026):** treat MS human signal as **proxy-calibration + curated, de-confounded preference data**, *not* a tight direct-optimization reward. Rationale: RT version stamps are still incomplete (RT-1) and the signal is confounded by featuring/paywalls — neither is safe to close a tight loop through. Revisit once RT-1 lands and confounds are controlled.
 
 ---
 
@@ -125,16 +125,13 @@ The known ways generate→train ecosystems rot. Each is a standing constraint.
 
 ---
 
-## The provenance gap (fix this first)
+## Provenance status (the loop's prerequisite)
 
-For any reader outcome to inform training, RT must know **which writer adapter, which steering card, which model version** produced each chapter. Today:
+For any reader outcome to inform training, RT must know **which writer adapter, which steering card, which model version** produced each chapter.
 
-- the RF → MS bundle carries **no model provenance**, and
-- MS stores chapters as plain `content TEXT` with **zero style metadata**.
+**RF → MS handoff: shipped.** New generations mint `story_id`, emit `provenance/` (per-act records + stitch offsets), and MS stores `novels.rf_story_id` + `chapters.rf_provenance` (JSONB `acts[]`). See **[PROVENANCE.md](PROVENANCE.md)** and [BACKLOG.md](BACKLOG.md) (RF-1, RF-2, MS-1).
 
-So even with perfect reader signal, "readers dropped off at chapter 7" cannot be joined to "chapter 7 was written by the `dark-fantasy` adapter under card X by model v3." **The provenance chain is severed at the RF → MS handoff.**
-
-This is a **data-contract fix, not an ML problem**, and it is the prerequisite for the entire backward flow. Specified in **[PROVENANCE.md](PROVENANCE.md)**.
+**Still open:** RT does not yet stamp stable `*_version` ids on shipped artifacts (RT-1), so RF often writes those fields as `null`. Until that lands, reader outcomes can join to story/chapter/act/card structure but not reliably to a model *version*. There is also no MS→RT export or calibration report yet.
 
 Note: git-level pinning (a manifest of known-good commits) gives *release*-granularity reproducibility, but the loop needs *per-story* provenance in the **data**. Don't conflate the two.
 
@@ -164,10 +161,11 @@ Provenance lives here precisely because it spans all three systems and has no si
 
 ## Open decisions
 
-1. **Human-signal role:** confirm the recommended calibration-first stance vs a tighter optimization loop.
-2. **Provenance ownership:** RF stamps and carries it; does MS *store* it (schema columns) or just *retain* the RF receipt keyed by novel/chapter? (PROVENANCE.md proposes storing a minimal join key.)
-3. **Umbrella mechanics:** manifest-only (current) vs promote to git submodules if atomic historical checkout becomes necessary.
+1. **Umbrella mechanics:** manifest-only (current) vs promote to git submodules if atomic historical checkout becomes necessary.
 
 ### Resolved
 
 - **romance-editor** (Jul 2026): superseded — editor stays in romance-training; the three products share the style-classification data substrate. See *Resolved — romance-editor is superseded* above.
+- **DEC-1 human-signal role** (Jul 2026): calibration-first + curated preference data; not a tight direct-optimization reward. See *The two-signal rule* above and [BACKLOG.md](BACKLOG.md).
+- **DEC-2 MS provenance storage** (Jul 2026): `novels.rf_story_id` + `chapters.rf_provenance` JSONB (`acts[]` with stitch offsets). No separate provenance table. See [PROVENANCE.md](PROVENANCE.md).
+- **RF→MS provenance handoff** (Jul 2026): RF-1 / RF-2 / MS-1 shipped. Remaining P0 is RT-1 (version ids). See [BACKLOG.md](BACKLOG.md).
