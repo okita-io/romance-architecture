@@ -12,7 +12,7 @@ set -euo pipefail
 REPOS=(
   "romance-training	git@github.com:okita-io/romance-training.git"
   "romance-factory	git@github.com:okita-io/romance-factory.git"
-  "midnight-satin	-"
+  "midnightsatin	git@github.com:okita-io/midnight-satin.git"
   # romance-editor: retired (superseded; editor lives in romance-training)
 )
 

@@ -28,8 +28,9 @@ repos:
 
   midnight-satin:
     role: frontend            # reader web app (Vercel / Neon)
-    remote: null              # TODO: set the GitHub remote used by Vercel git integration
-    default_branch: main
+    remote: git@github.com:okita-io/midnight-satin.git  # migrated from badkangaroo/Midnight-Satin (Jul 2026); private
+    default_branch: master    # branches migrated: master, beta, development, releases (cursor/* not carried over)
+    checkout_dir: midnightsatin  # local sibling dir name (no hyphen)
     known_good_commit: null
 
   romance-editor:
