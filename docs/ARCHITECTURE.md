@@ -33,6 +33,15 @@ Rationale: editing and writing are tightly interlinked, and — critically — t
 
 ---
 
+## Standing conventions
+
+Project-wide rules of thumb, owned here because this repo is the coordination hub as MS/RF/RT converge. They hold until explicitly revised in this doc.
+
+- **Legacy support = dropped.** We are early-stage; optimize for new work, not backward compatibility. Do **not** add code to support legacy generations. In particular, RF's pre-existing `stories/` bundles predate the card/provenance system and are **unsupported** — build for **new generations only**, with no backfill or compatibility shims. The contracts here (steering card, provenance) are therefore **forward-only**.
+- **Separate training products** (established): judge, editor, and writer are never cross-trained; the referee judge is held out from the writer's reward loop.
+
+---
+
 ## Forward flow — artifacts move RT → RF → MS
 
 ```mermaid
@@ -144,7 +153,9 @@ Note: git-level pinning (a manifest of known-good commits) gives *release*-granu
 |----------|----------------|--------------------------|
 | Story bundle (RF → MS) | MS `docs/ROMANCE_FACTORY_INGEST.md` | Referenced, not duplicated |
 | Consumer gaps (MS ← RF) | MS `docs/ROMANCE_FACTORY_GAPS.md` | Referenced |
-| Model artifacts + card schema (RT → RF) | RT `docs/PHASE5_STYLE_STEERING.md`, `MOE_WRITER.md` | Referenced |
+| Model artifacts (RT → RF) | RT `docs/PHASE5_STYLE_STEERING.md`, `MOE_WRITER.md` | Referenced |
+| **Steering card (RT vocab → RF authoring → MS provenance)** | **This repo — [contracts/STEERING_CARD.md](contracts/STEERING_CARD.md)** | Owned here (canonical shape + cascade) |
+| **Identifiers & segmentation (story→chapter→act→span)** | **This repo — [contracts/IDENTIFIERS.md](contracts/IDENTIFIERS.md)** | Owned here (hierarchy + ids + stitch offsets) |
 | **Per-story provenance (RT → RF → MS)** | **This repo — [PROVENANCE.md](PROVENANCE.md)** | Owned here (spans all three) |
 
 Provenance lives here precisely because it spans all three systems and has no single owner otherwise.

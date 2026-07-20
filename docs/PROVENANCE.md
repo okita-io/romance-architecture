@@ -2,6 +2,7 @@
 
 **Status:** Proposed contract (Jul 2026) — not yet implemented in any system
 **Spans:** romance-training (RT) → romance-factory (RF) → midnight-satin (MS)
+**Scope:** New generations only — forward-only, no backfill of legacy RF `stories/` or already-imported MS novels (see [ARCHITECTURE.md → Standing conventions](ARCHITECTURE.md#standing-conventions)).
 **Purpose:** Make every reader outcome **joinable** to the generation choices that produced it, so the backward feedback loop ([ARCHITECTURE.md](ARCHITECTURE.md)) is possible at all.
 
 ---
@@ -68,16 +69,18 @@ Every generated unit (chapter, and ideally each span within it) carries:
 
 ### RF (romance-factory) — *record and carry*
 
-- At generation, record the provenance record **per chapter** (per span where feasible), including the card used, the adapter selected, model versions, and the editor/judge grades from its draft→grade→revise loop.
-- Emit it in the story bundle. **Proposed extension** to the bundle:
+- At generation, record provenance at the **act** grain — the card grain and the unit RF actually drafts (see [contracts/IDENTIFIERS.md](contracts/IDENTIFIERS.md)). A chapter's provenance is its **ordered `acts[]`**, each with the card used, adapter, model versions, editor/judge grades, and its **char range within the stitched chapter** (`char_start`/`char_end`) so per-chapter reader signal can localize to the act.
+- Emit it in the story bundle, keyed by `story_id`. **Proposed extension** to the bundle:
 
 ```text
 <story>/
 ├── ...
 ├── publish_manifest.json
 └── provenance/
-    ├── story.json            # story-level: dominant model/adapter, rubric_version
-    └── chapter_NN.json       # per-chapter provenance record (+ optional spans[])
+    ├── story.json            # story_id, dominant model/adapter, rubric_version
+    └── chapter_NN.json       # { chapter_number, acts: [ {act_number, card_id, adapter,
+    │                          #   base_version, editor_card_hit, judge_score,
+    │                          #   char_start, char_end}, ... ] }
 ```
 
 This is additive — it does not change existing ingest fields (MS `ROMANCE_FACTORY_INGEST.md`).
