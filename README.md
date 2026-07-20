@@ -29,6 +29,10 @@ The systems are coupled by **contracts**, not shared code, and each deploys inde
 docs/
   ARCHITECTURE.md   # the map: systems, forward flow, feedback loops, principles
   PROVENANCE.md     # per-story provenance contract (RT→RF→MS) — the loop's prerequisite
+  BACKLOG.md        # cross-system task origination board (what's blocking convergence)
+  contracts/
+    STEERING_CARD.md  # canonical steering-card shape + cascade (RT vocab → RF authoring)
+    IDENTIFIERS.md    # story→chapter→act→span hierarchy, ids, act→chapter stitch offsets
 manifest.yaml       # repo URLs + current known-good commit of each system
 scripts/
   clone-all.sh      # clone/pull all sibling repos into the expected layout
