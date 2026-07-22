@@ -18,6 +18,96 @@ RT ──(models + card schema + rubric)──▶ RF ──(story bundle + asset
  └───── feedback: RF machine signal (grades) + MS human signal (reads) ─────────┘
 ```
 
+## End-to-end lifecycle (step by step)
+
+The full loop: **RT trains the models → RF writes and grades a book → the book is bundled for MS → readers generate signal → that signal (plus RF's own grades) calibrates the next RT model, which ships back to RF.** Numbers on the nodes are the step order.
+
+**Legend:** solid **thick** arrows are the *shipped, forward* artifact path; **dashed** arrows are the *feedback loops*, which are mostly **greenfield** today (the RF→MS handoff is real; the MS→RT export/calibration is not built yet, and RT-1 model-version stamps are still open). Grounded in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PROVENANCE.md](docs/PROVENANCE.md), RT `docs/MOE_WRITER.md` / `docs/MOE_STYLE_EDITOR.md`, and RF `docs/SYSTEM_SUMMARY.md`.
+
+```mermaid
+flowchart TB
+  %% ===================== RT — model factory =====================
+  subgraph RT["romance-training (RT) — the model factory (DGX Spark)"]
+    direction TB
+    T1["1 Teacher council<br/>3 prompt-variant judges + arbitrator<br/>label real prose (Gutenberg/romance)"]
+    T2["2 Trusted style labels<br/>+ Leech & Short rubric<br/>+ shared steering_card schema"]
+    T3["3 SFT on Gemma 4 26B-A4B MoE (LoRA)<br/>3 separate products — never cross-trained"]
+    JUDGE["Judge<br/>held-out referee"]
+    EDITOR["Editor<br/>grade + rewrite"]
+    WRITER["Writer<br/>card-conditioned MoE + voice/genre LoRA"]
+    T4{"4 Phase 5A bake-off<br/>quality gate"}
+    T5["5 Export GGUF Q4/Q5<br/>+ LoRA adapters<br/>+ card schema + rubric_version"]
+    T1 --> T2 --> T3
+    T3 --> JUDGE
+    T3 --> EDITOR
+    T3 --> WRITER
+    JUDGE --> T4
+    EDITOR --> T4
+    WRITER --> T4
+    T4 -->|pass| T5
+    T4 -->|fail| T3
+  end
+
+  %% ===================== RF — the harness =====================
+  subgraph RF["romance-factory (RF) — the harness (14-phase pipeline)"]
+    direction TB
+    F1["6 Plan (phases 2-7)<br/>author, world, characters, 12-beat arc,<br/>outline with a per-act steering card"]
+    F2["7 Draft (phase 8)<br/>Writer+adapter drafts each act under its card,<br/>RAG context from LanceDB"]
+    F3["8 Grade (phase 10)<br/>Editor/Judge: rubric grader + style grader<br/>-> card-hit + score"]
+    F4{"9 Pass threshold?"}
+    F5["10 Revise (phase 11)<br/>surgical editor + weakest-first rewrite loop"]
+    F6["11 Merge (phases 9,12)<br/>stitch ordered acts -> chapters -> manuscript"]
+    F7["12 Record provenance<br/>story_id, acts[], card_id, adapter,<br/>grades, act-to-chapter stitch offsets"]
+    F1 --> F2 --> F3 --> F4
+    F4 -->|no| F5 --> F3
+    F4 -->|yes| F6 --> F7
+  end
+
+  %% ===================== Publish prep =====================
+  subgraph PACK["Publish prep for MS (RF phases 12-15b)"]
+    direction TB
+    B1["13 Phase 15 assets<br/>SDXL cover + portraits (mac mini),<br/>publish_manifest.json"]
+    B2["14 Phase 15b bundle<br/>chapters/*.md + dossiers + images<br/>+ provenance/ -> romance-bundle.zip"]
+    B1 --> B2
+  end
+
+  %% ===================== MS — frontend =====================
+  subgraph MS["midnight-satin (MS) — the frontend (Vercel / Neon)"]
+    direction TB
+    M1["15 Import to Neon<br/>novels.rf_story_id + chapters.rf_provenance (acts[])"]
+    M2["16 Readers read, unlock, review, comment"]
+    M3["17 Capture reader signal<br/>reading_progress, chapter_unlocks,<br/>reviews, paperback_orders"]
+    M1 --> M2 --> M3
+  end
+
+  %% ===================== Feedback / calibration =====================
+  subgraph LOOP["Feedback -> calibration -> next model (greenfield)"]
+    direction TB
+    L1["18 Join on provenance<br/>reader outcome joins acts[]/card/adapter/grades<br/>de-confound: is_featured, paywall, promotion"]
+    L2["19 Calibration report<br/>do editor/judge scores predict<br/>reader completion and unlocks?"]
+    L3["20 Curated, de-confounded preference data<br/>gated, calibration-first (DEC-1)"]
+    L1 --> L2 --> L3
+  end
+
+  %% forward artifact path (shipped)
+  T5 ==>|"models + card schema + rubric"| F1
+  F7 --> B1
+  B2 ==>|"story bundle + provenance"| M1
+
+  %% feedback loops (greenfield)
+  F3 -.->|"machine signal: grades, card + adapter used"| L1
+  M3 -.->|"human signal: reads, drop-off, unlocks"| L1
+  L3 -.->|"retrain writer/editor (judge stays held out)"| T3
+```
+
+**Reading the loop by stage:**
+
+1. **RT builds the models (steps 1-5).** A *teacher council* (three prompt-variant judges + an arbitrator) labels real human prose against the Leech & Short rubric. Those trusted labels train three *separate* products on one Gemma 4 26B-A4B MoE base — **judge** (referee), **editor** (grade + rewrite), **writer** (card-conditioned generator with swappable voice/genre LoRA adapters). A Phase 5A bake-off gates quality, then RT exports **GGUF quantizations + LoRA adapters + the card schema + rubric version**.
+2. **RF writes a book (steps 6-12).** RF loads the models and runs its 14-phase pipeline: plan → **draft** each act under its steering card → **grade** with the editor/judge → **revise** weakest-first (surgical editor + rewrite loop) until it clears the threshold → **merge** acts into chapters, and record per-act **provenance** keyed by `story_id`.
+3. **RF bundles for MS (steps 13-14).** Phase 15 generates the SDXL cover/portraits and `publish_manifest.json`; phase 15b packages chapters, dossiers, images, and the `provenance/` records into a portable `romance-bundle.zip`.
+4. **MS publishes and listens (steps 15-17).** MS imports the bundle to Neon (storing `rf_story_id` + `rf_provenance`), readers consume it, and MS captures behavioral signal.
+5. **The signal calibrates the next model (steps 18-20).** RF's machine grades and MS's human signal join back through provenance, get de-confounded, and produce a calibration report; only *after* the proxies are calibrated does gated, curated preference data flow into RT to retrain the writer/editor — producing the next LoRA+MoE GGUF that ships back to RF at step 5. The **judge is held out** from this reward loop by design.
+
 ## Why this repo exists
 
 The systems are coupled by **contracts**, not shared code, and each deploys independently (MS is on Vercel). A monorepo would break independent CI/deploy. So this is a **thin meta-repo**: cross-cutting docs + contracts + a manifest of the other repos. Pin exact commits in [`manifest.yaml`](manifest.yaml) when you need a reproducible known-good tuple.

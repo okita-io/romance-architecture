@@ -26,7 +26,7 @@ So "readers dropped off at chapter 7" could not become "the `dark-fantasy` adapt
 | RF `provenance/story.json` + `provenance/chapter_NN.json` with act stitch offsets | **Shipped** (RF-2); version/grade fields often `null` until RT-1 + grade wiring |
 | MS `novels.rf_story_id` + `chapters.rf_provenance` JSONB | **Shipped** (MS-1; migration `012_add_rf_provenance.sql`) |
 | RT stable `*_version` ids on shipped artifacts | **Open** (RT-1) — the remaining identity gap |
-| MS export / RT calibration report | **Open** (post-P0) |
+| MS export / RT calibration report | **Open** (post-P0) — MS-2 (scheduled export) → RT-5 (calibration report); see [BACKLOG.md](BACKLOG.md#p2--close-the-loop-once-ms-has-readers) |
 
 ---
 

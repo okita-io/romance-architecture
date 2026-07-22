@@ -34,6 +34,19 @@ Cheap, additive work that gates everything downstream. The RF→MS handoff is in
 
 ---
 
+## P2 — Close the loop (once MS has readers)
+
+The feedback loop that step 18-20 of the [README lifecycle](../README.md#end-to-end-lifecycle-step-by-step) diagram depicts. These are **gated on MS having live human readers** and on RT-1 landing so outcomes join to a model *version*. Until then the signal tables exist but there is nothing to export.
+
+| id | owner | status | task | unblocks | src |
+|----|-------|--------|------|----------|-----|
+| **MS-2** | MS | Open | **Scheduled reader-signal export** for RT: periodic dump of reader outcomes (`reading_progress`, `chapter_unlocks`, `novel_reviews`, `paperback_orders`) joined to `rf_story_id` + `chapters.rf_provenance` (`acts[]`), **carrying the confound columns** (`is_featured`, `featured_order`, `is_free`, promotion) for de-confounding, **aggregated/pseudonymized with no reader PII** and respecting consent + age-gating | the MS→RT calibration dataset (the only non-circular signal) | PROVENANCE §join, ARCHITECTURE (two-signal rule, failure-modes 3 & 5) |
+| **RT-5** | RT | Open | Consume the MS-2 export: build the recurring **calibration report** (do `editor_card_hit` / `judge_score` predict reader completion/unlocks?) and surface **localized hard negatives** (high drop-off despite high editor score) | proxy calibration; later curated preference data (DEC-1) | PROVENANCE §join, ARCHITECTURE (two-signal rule) |
+
+**Cadence:** treat the export as a **slow calibration channel**, not a live gradient (ARCHITECTURE failure-mode 4) — a regular batch (e.g. weekly/monthly) is the intent, not per-event streaming. First measure correlation; only then, and only gated, does curated preference data flow into writer/editor training.
+
+---
+
 ## Decisions
 
 | id | decision | status | resolution | src |
@@ -45,6 +58,6 @@ Cheap, additive work that gates everything downstream. The RF→MS handoff is in
 
 ## Notes
 
-- **Sequencing (updated):** RF-1 → RF-2 → MS-1 are shipped. Next: **RT-1**, then the calibration report. P1 can proceed independently.
+- **Sequencing (updated):** RF-1 → RF-2 → MS-1 are shipped. Next: **RT-1**, then the first calibration report. P1 can proceed independently. **P2** (MS-2 export → RT-5 calibration) waits on live MS readers + RT-1.
 - Related MS consumer work (not owned here): transactional / idempotent re-import by `rf_story_id` — see MS `docs/ROMANCE_FACTORY_GAPS.md`.
 - This board is **task origination**, not a project tracker — once an item is picked up, it lives in its owning repo's issues/PRs. Check items off here when the owning repo ships them.
