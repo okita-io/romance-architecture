@@ -1,9 +1,9 @@
 # Romance Project — System Architecture
 
 **Status:** Living architecture doc (Jul 2026)
-**Scope:** How **romance-training (RT)**, **romance-factory (RF)**, and **midnight-satin (MS)** work together — the forward artifact flow, the backward feedback loops, and the contracts at each boundary.
+**Scope:** How **romance-training (RT)**, **romance-factory (RF)**, **romance-voice (RV)**, and **midnight-satin (MS)** work together — the forward artifact flow, the backward feedback loops, and the contracts at each boundary.
 
-This repo owns **no runtime code**. It owns the *map*, the *cross-cutting contracts*, and the *design principles* that keep three independently-deployed systems coherent. Each system keeps its own repo, remote, CI, and deploy cadence.
+This repo owns **no runtime code**. It owns the *map*, the *cross-cutting contracts*, and the *design principles* that keep independently-deployed systems coherent. Each system keeps its own repo, remote, CI, and deploy cadence.
 
 ---
 
@@ -13,6 +13,7 @@ This repo owns **no runtime code**. It owns the *map*, the *cross-cutting contra
 |------|------|-------|--------|
 | **romance-training (RT)** | Trains the models: **judge**, **editor**, **writer** | Python / Unsloth / Gemma 4 MoE, on DGX Spark | Ships model artifacts (GGUF/LoRA) + contracts |
 | **romance-factory (RF)** | The **harness**: runs the models, drafts → grades → revises → merges into finished books; emits generation telemetry | Python generate pipeline | Produces story bundles |
+| **romance-voice (RV)** | **Audiobook TTS**: Spark-resident VoxCPM; RF/RT upload manuscript or story zip → MP3 / audiobook zip | FastAPI + VoxCPM (RF engine), on DGX Spark | HTTP on Spark `:8081` (tunnel `:18081`) |
 | **midnight-satin (MS)** | The **frontend**: readers discover, read, unlock, review, comment; captures reader signal | Next.js 16 / Vercel / Neon Postgres | Vercel (git-integrated) |
 
 ### RT's three products (never cross-trained)
@@ -31,31 +32,47 @@ Rationale: editing and writing are tightly interlinked, and — critically — t
 
 > This is the deeper reason RT is one repo, not three: the products share a **model** base family *and* a **data** substrate (the classification labels). Keep them co-located; keep the checkpoints separate.
 
+### Resolved — TTS lives in romance-voice, not in RF's process
+
+**romance-voice (RV)** is the Spark-resident audiobook TTS service. RF already owns the *batch* CLI (`romance-factory-tts` / VoxCPM engine); RV wraps that engine behind an HTTP job API so the RF/RT *client workstation* can upload a manuscript or story zip, leave synthesis on Spark, and download MP3 (or a zip of per-act MP3s + `audio_manifest.json`).
+
+**Decision (Jul 2026): keep TTS as its own repo and GPU tenant.** Rationale: VoxCPM must not share a venv or idle residency with LM Studio (the prose LLM on Spark `:1234`). RV loads/unloads on demand (`unload_after`), listens on `:8081` (RT tunnel `:18081`), and never blocks the LLM path. RF remains the content owner; RV is a *service* RF (or RT) calls — not a fourth training product. Narrated audio **does** enter the MS ingest path as part of the publish bundle (see **DEC-4** / [contracts/AUDIOBOOK.md](contracts/AUDIOBOOK.md)).
+
+Canonical runbook: RV `AGENTS.md` + `tts-spark-serve.md`. Product API: `POST /v1/audio/audiobook` → poll `GET /v1/audio/jobs/{id}` → `.../mp3` or `.../download`.
+
 ---
 
 ## Standing conventions
 
-Project-wide rules of thumb, owned here because this repo is the coordination hub as MS/RF/RT converge. They hold until explicitly revised in this doc.
+Project-wide rules of thumb, owned here because this repo is the coordination hub as MS/RF/RT/RV converge. They hold until explicitly revised in this doc.
 
 - **Legacy support = dropped.** We are early-stage; optimize for new work, not backward compatibility. Do **not** add code to support legacy generations. In particular, RF's pre-existing `stories/` bundles predate the card/provenance system and are **unsupported** — build for **new generations only**, with no backfill or compatibility shims. The contracts here (steering card, provenance) are therefore **forward-only**.
 - **Separate training products** (established): judge, editor, and writer are never cross-trained; the referee judge is held out from the writer's reward loop.
+- **Spark GPU tenancy:** LM Studio (LLM `:1234`), romance-voice (TTS `:8081`), and ComfyUI (`:8188`) are **separate tenants**. Do not install TTS into the LLM path; unload VoxCPM when idle; prefer pausing LM Studio for heavy audiobook jobs until concurrent residency is measured (RV runbook policy A).
 
 ---
 
-## Forward flow — artifacts move RT → RF → MS
+## Forward flow — artifacts move RT → RF → MS (with RF ↔ RV for audio)
 
 ```mermaid
 flowchart LR
   RT[romance-training] -->|models + card schema + rubric| RF[romance-factory]
+  RF -->|story / manuscript| RV[romance-voice]
+  RV -->|MP3 + audio_manifest| RF
   RF -->|story bundle + assets| MS[midnight-satin]
   MS -->|book| reader[Reader]
 ```
 
 **RT → RF (model artifacts).** Quantized base + writer adapters + editor + judge (GGUF/LoRA), the shared `steering_card` schema, and the rubric version. RF loads these and runs the draft→grade→revise loop.
 
-**RF → MS (story bundle).** A self-contained story directory — `author_profile.json`, `book_cover.json`, `character_dossiers.json`, `story_outline.json`, `publish_manifest.json`, `chapters/chapter_NN.md`, `publish_images/`. This edge is **already real and contracted**: see MS `docs/ROMANCE_FACTORY_INGEST.md` and the consumer gap list in `docs/ROMANCE_FACTORY_GAPS.md`. Ownership boundary: RF owns content + assets + metadata; MS validates, imports to Neon, and presents.
+**RF ↔ RV (audiobook).** RF (or RT) uploads a story zip or manuscript to RV over HTTP; Spark runs VoxCPM, then a **forced-alignment post-process** (stable-ts) to produce paragraph cues; the client downloads per-act MP3s + `audio_manifest.json`. Narrator brief comes from the author profile (`tts_narrator_voice`) or the request's `voice_design`. Assets land on the story tree under `audio/` and ship in the publish bundle. **Status:** Spark service scaffolded; live synth + alignment still open (RV-1 / RV-2); RF client + bundle wiring (RF-4 / RF-5). Contract: [contracts/AUDIOBOOK.md](contracts/AUDIOBOOK.md) (§4b alignment bridge).
 
-Operational note: SDXL cover/portrait generation runs on the **mac mini after ejecting the prose LLM from LM Studio** — that box does prose *or* images, not both at once (see RT `docs/LLM-Backends.md` for hosting).
+**RF → MS (story bundle).** A self-contained story directory — `author_profile.json`, `book_cover.json`, `character_dossiers.json`, `story_outline.json`, `publish_manifest.json`, `chapters/chapter_NN.md`, `publish_images/`, and **`audio/`** (`audio_manifest.json` + chapter/act MP3s). Prose + image edge is **already real and contracted**: see MS `docs/ROMANCE_FACTORY_INGEST.md` and `docs/ROMANCE_FACTORY_GAPS.md`. Audiobook is **contracted** (DEC-4 / DEC-5): at MS ingest, **MP3s → Vercel Blob**, **paragraph cues → Neon JSONB**; player work is MS-3 / MS-4 (parallel to RV). Ownership boundary: RF owns content + assets + metadata (including audio); MS validates, imports, and presents.
+
+Operational notes:
+- **Prose LLM** on Spark = LM Studio (`:1234`, RT tunnel `:18080`). See RT `docs/LLM-Backends.md`.
+- **TTS** on Spark = romance-voice (`:8081`, RT tunnel `:18081`). Separate venv; load/unload policy in RV `AGENTS.md`.
+- **SDXL** cover/portrait generation runs on the **mac mini after ejecting the prose LLM from LM Studio** on that box — prose *or* images, not both at once.
 
 ---
 
@@ -102,6 +119,7 @@ Ranked by trustworthiness — **revealed preference** (what readers did, at a co
 |--------|-----------|------|----------|
 | Bought the paperback | `paperback_orders` | Revealed (costly) | **Strongest** |
 | Paid credits to read past the Veil | `chapter_unlocks` + `credit_transactions` | Revealed (costly) | **Strong** |
+| Paid 1 credit for the novel audiobook | `audiobook_unlocks` + `credit_transactions` (`audiobook_unlock`) | Revealed (costly), **novel-level** | **Strong** — intent to listen (DEC-4; MS-4) |
 | Where readers stop | `reading_progress.scroll_percent` (per chapter) | Behavioral, **localized** | **Strong** — drop-off = where prose lost them |
 | Star rating + text | `novel_reviews.star_rating` | Stated | Medium |
 | Chapter reactions | `comments` (threaded, `like_count`) | Stated, needs NLP | Medium |
@@ -151,11 +169,13 @@ Note: git-level pinning (a manifest of known-good commits) gives *release*-granu
 | Story bundle (RF → MS) | MS `docs/ROMANCE_FACTORY_INGEST.md` | Referenced, not duplicated |
 | Consumer gaps (MS ← RF) | MS `docs/ROMANCE_FACTORY_GAPS.md` | Referenced |
 | Model artifacts (RT → RF) | RT `docs/PHASE5_STYLE_STEERING.md`, `MOE_WRITER.md` | Referenced |
+| Audiobook TTS serve (RF/RT → RV) | RV `AGENTS.md`, `tts-spark-serve.md` | Summarized in *Resolved — TTS lives in romance-voice* above |
+| **Audiobook bundle + reading room (RV → RF → MS)** | **This repo — [contracts/AUDIOBOOK.md](contracts/AUDIOBOOK.md)** | Owned here (bundle, cues, unlock, Veil gate, jump-sync) |
 | **Steering card (RT vocab → RF authoring → MS provenance)** | **This repo — [contracts/STEERING_CARD.md](contracts/STEERING_CARD.md)** | Owned here (canonical shape + cascade) |
 | **Identifiers & segmentation (story→chapter→act→span)** | **This repo — [contracts/IDENTIFIERS.md](contracts/IDENTIFIERS.md)** | Owned here (hierarchy + ids + stitch offsets) |
-| **Per-story provenance (RT → RF → MS)** | **This repo — [PROVENANCE.md](PROVENANCE.md)** | Owned here (spans all three) |
+| **Per-story provenance (RT → RF → MS)** | **This repo — [PROVENANCE.md](PROVENANCE.md)** | Owned here (spans RT/RF/MS; audio cues join via `story_id` + chapter char offsets) |
 
-Provenance lives here precisely because it spans all three systems and has no single owner otherwise.
+Provenance lives here precisely because it spans RT/RF/MS and has no single owner otherwise. Audiobook packaging and reading-room rules live in [contracts/AUDIOBOOK.md](contracts/AUDIOBOOK.md) for the same reason (RV + RF + MS).
 
 ---
 
@@ -166,6 +186,9 @@ Provenance lives here precisely because it spans all three systems and has no si
 ### Resolved
 
 - **romance-editor** (Jul 2026): superseded — editor stays in romance-training; the three products share the style-classification data substrate. See *Resolved — romance-editor is superseded* above.
+- **romance-voice** (Jul 2026): Spark-resident TTS as its own repo/GPU tenant; RF owns content + batch CLI, RV owns the HTTP serve path. See *Resolved — TTS lives in romance-voice* above.
 - **DEC-1 human-signal role** (Jul 2026): calibration-first + curated preference data; not a tight direct-optimization reward. See *The two-signal rule* above and [BACKLOG.md](BACKLOG.md).
 - **DEC-2 MS provenance storage** (Jul 2026): `novels.rf_story_id` + `chapters.rf_provenance` JSONB (`acts[]` with stitch offsets). No separate provenance table. See [PROVENANCE.md](PROVENANCE.md).
+- **DEC-4 audiobook → MS** (Jul 2026): `audio/` is required in the publish bundle; 1-credit novel-level unlock; playback capped to Veil-unlocked chapters; paragraph jump-sync (not continuous scroll); background playback. See [contracts/AUDIOBOOK.md](contracts/AUDIOBOOK.md) and [BACKLOG.md](BACKLOG.md).
+- **DEC-5 audiobook storage** (Jul 2026): MP3s in **Vercel Blob**; paragraph cues in **Neon JSONB**; bundle manifest is import source of truth. See [contracts/AUDIOBOOK.md](contracts/AUDIOBOOK.md) §5.
 - **RF→MS provenance handoff** (Jul 2026): RF-1 / RF-2 / MS-1 shipped. Remaining P0 is RT-1 (version ids). See [BACKLOG.md](BACKLOG.md).

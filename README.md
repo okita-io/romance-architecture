@@ -10,19 +10,22 @@ Start here: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 |------|------|-------|
 | **romance-training** (RT) | Trains the models — judge, editor, writer | Gemma 4 MoE on DGX Spark; ships artifacts + contracts |
 | **romance-factory** (RF) | Harness — runs models, drafts→grades→revises→merges books | Produces story bundles |
+| **romance-voice** (RV) | Audiobook TTS — Spark-resident VoxCPM | RF/RT upload → MP3; HTTP `:8081` / tunnel `:18081` |
 | **midnight-satin** (MS) | Frontend — readers read, unlock, review, comment | Next.js / Vercel / Neon; captures reader signal |
 
 ```
-RT ──(models + card schema + rubric)──▶ RF ──(story bundle + assets)──▶ MS ──▶ readers
- ▲                                                                              │
- └───── feedback: RF machine signal (grades) + MS human signal (reads) ─────────┘
+RT ──(models + card schema + rubric)──▶ RF ──(story bundle + assets + audio/)──▶ MS ──▶ readers
+                                         │ ▲                                          │
+                                         └─┴─ RV (audiobook MP3 + paragraph cues)     │
+ ▲                                                                                    │
+ └───── feedback: RF machine signal (grades) + MS human signal (reads) ───────────────┘
 ```
 
 ## End-to-end lifecycle (step by step)
 
 The full loop: **RT trains the models → RF writes and grades a book → the book is bundled for MS → readers generate signal → that signal (plus RF's own grades) calibrates the next RT model, which ships back to RF.** Numbers on the nodes are the step order.
 
-**Legend:** solid **thick** arrows are the *shipped, forward* artifact path; **dashed** arrows are the *feedback loops*, which are mostly **greenfield** today (the RF→MS handoff is real; the MS→RT export/calibration is not built yet, and RT-1 model-version stamps are still open). Grounded in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PROVENANCE.md](docs/PROVENANCE.md), RT `docs/MOE_WRITER.md` / `docs/MOE_STYLE_EDITOR.md`, and RF `docs/SYSTEM_SUMMARY.md`.
+**Legend:** solid **thick** arrows are the *shipped, forward* artifact path; **dashed** arrows are the *feedback loops*, which are mostly **greenfield** today (the RF→MS prose provenance handoff is real; audiobook ingest/player and the MS→RT export/calibration are not built yet, and RT-1 model-version stamps are still open). Grounded in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/PROVENANCE.md](docs/PROVENANCE.md), [docs/contracts/AUDIOBOOK.md](docs/contracts/AUDIOBOOK.md), RT `docs/MOE_WRITER.md` / `docs/MOE_STYLE_EDITOR.md`, and RF `docs/SYSTEM_SUMMARY.md`.
 
 ```mermaid
 flowchart TB
@@ -64,35 +67,36 @@ flowchart TB
   end
 
   %% ===================== Publish prep =====================
-  subgraph PACK["Publish prep for MS (RF phases 12-15b)"]
+  subgraph PACK["Publish prep for MS (RF phases 12-15b) + required RV audiobook"]
     direction TB
     B1["13 Phase 15 assets<br/>SDXL cover + portraits (mac mini),<br/>publish_manifest.json"]
-    B2["14 Phase 15b bundle<br/>chapters/*.md + dossiers + images<br/>+ provenance/ -> romance-bundle.zip"]
-    B1 --> B2
+    RV["14 romance-voice (RV)<br/>upload story → VoxCPM on Spark<br/>→ audio/ + audio_manifest (paragraph cues)"]
+    B2["15 Phase 15b bundle<br/>chapters + dossiers + images<br/>+ provenance/ + audio/ → romance-bundle.zip"]
+    B1 --> RV --> B2
   end
 
   %% ===================== MS — frontend =====================
   subgraph MS["midnight-satin (MS) — the frontend (Vercel / Neon)"]
     direction TB
-    M1["15 Import to Neon<br/>novels.rf_story_id + chapters.rf_provenance (acts[])"]
-    M2["16 Readers read, unlock, review, comment"]
-    M3["17 Capture reader signal<br/>reading_progress, chapter_unlocks,<br/>reviews, paperback_orders"]
+    M1["16 Import to Neon<br/>novels.rf_story_id + chapters.rf_provenance (acts[])<br/>+ audiobook assets / metadata"]
+    M2["17 Readers read, unlock chapters (Veil), unlock audiobook (1 credit), review, comment"]
+    M3["18 Capture reader signal<br/>reading_progress, chapter_unlocks, audiobook_unlocks,<br/>reviews, paperback_orders"]
     M1 --> M2 --> M3
   end
 
   %% ===================== Feedback / calibration =====================
   subgraph LOOP["Feedback -> calibration -> next model (greenfield)"]
     direction TB
-    L1["18 Join on provenance<br/>reader outcome joins acts[]/card/adapter/grades<br/>de-confound: is_featured, paywall, promotion"]
-    L2["19 Calibration report<br/>do editor/judge scores predict<br/>reader completion and unlocks?"]
-    L3["20 Curated, de-confounded preference data<br/>gated, calibration-first (DEC-1)"]
+    L1["19 Join on provenance<br/>reader outcome joins acts[]/card/adapter/grades<br/>de-confound: is_featured, paywall, promotion"]
+    L2["20 Calibration report<br/>do editor/judge scores predict<br/>reader completion and unlocks?"]
+    L3["21 Curated, de-confounded preference data<br/>gated, calibration-first (DEC-1)"]
     L1 --> L2 --> L3
   end
 
   %% forward artifact path (shipped)
   T5 ==>|"models + card schema + rubric"| F1
   F7 --> B1
-  B2 ==>|"story bundle + provenance"| M1
+  B2 ==>|"story bundle + provenance + audio"| M1
 
   %% feedback loops (greenfield)
   F3 -.->|"machine signal: grades, card + adapter used"| L1
@@ -104,9 +108,9 @@ flowchart TB
 
 1. **RT builds the models (steps 1-5).** A *teacher council* (three prompt-variant judges + an arbitrator) labels real human prose against the Leech & Short rubric. Those trusted labels train three *separate* products on one Gemma 4 26B-A4B MoE base — **judge** (referee), **editor** (grade + rewrite), **writer** (card-conditioned generator with swappable voice/genre LoRA adapters). A Phase 5A bake-off gates quality, then RT exports **GGUF quantizations + LoRA adapters + the card schema + rubric version**.
 2. **RF writes a book (steps 6-12).** RF loads the models and runs its 14-phase pipeline: plan → **draft** each act under its steering card → **grade** with the editor/judge → **revise** weakest-first (surgical editor + rewrite loop) until it clears the threshold → **merge** acts into chapters, and record per-act **provenance** keyed by `story_id`.
-3. **RF bundles for MS (steps 13-14).** Phase 15 generates the SDXL cover/portraits and `publish_manifest.json`; phase 15b packages chapters, dossiers, images, and the `provenance/` records into a portable `romance-bundle.zip`.
-4. **MS publishes and listens (steps 15-17).** MS imports the bundle to Neon (storing `rf_story_id` + `rf_provenance`), readers consume it, and MS captures behavioral signal.
-5. **The signal calibrates the next model (steps 18-20).** RF's machine grades and MS's human signal join back through provenance, get de-confounded, and produce a calibration report; only *after* the proxies are calibrated does gated, curated preference data flow into RT to retrain the writer/editor — producing the next LoRA+MoE GGUF that ships back to RF at step 5. The **judge is held out** from this reward loop by design.
+3. **RF bundles for MS (steps 13-15).** Phase 15 generates the SDXL cover/portraits and `publish_manifest.json`; **romance-voice** narrates the story on Spark (VoxCPM) into `audio/` + `audio_manifest.json` with **paragraph cues**; phase 15b packages chapters, dossiers, images, provenance, and audio into a portable `romance-bundle.zip` ([contracts/AUDIOBOOK.md](docs/contracts/AUDIOBOOK.md)).
+4. **MS publishes and listens (steps 16-18).** MS imports the bundle to Neon (storing `rf_story_id` + `rf_provenance` + audiobook assets). Readers unlock chapters via The Veil and may spend **1 credit** for the novel audiobook; the reading room plays narration only through unlocked chapters, **jumps to the paragraph** about to be read, and continues in the **background**.
+5. **The signal calibrates the next model (steps 19-21).** RF's machine grades and MS's human signal join back through provenance, get de-confounded, and produce a calibration report; only *after* the proxies are calibrated does gated, curated preference data flow into RT to retrain the writer/editor — producing the next LoRA+MoE GGUF that ships back to RF at step 5. The **judge is held out** from this reward loop by design.
 
 ## Why this repo exists
 
@@ -122,7 +126,8 @@ docs/
   contracts/
     STEERING_CARD.md  # canonical steering-card shape + cascade (RT vocab → RF authoring)
     IDENTIFIERS.md    # story→chapter→act→span hierarchy, ids, act→chapter stitch offsets
-manifest.yaml       # repo URLs + current known-good commit of each system
+    AUDIOBOOK.md      # bundle audio/, paragraph cues, 1-credit unlock, Veil gate, jump-sync
+manifest.yaml       # repo URLs + current known-good commit of each system (RT, RF, MS, RV)
 scripts/
   clone-all.sh      # clone/pull all sibling repos into the expected layout
 ```

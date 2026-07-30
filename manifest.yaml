@@ -33,6 +33,12 @@ repos:
     checkout_dir: midnightsatin  # local sibling dir name (no hyphen)
     known_good_commit: null
 
+  romance-voice:
+    role: tts                 # Spark-resident audiobook TTS (VoxCPM); RF/RT upload → MP3
+    remote: git@github.com:okita-io/romance-voice.git
+    default_branch: main
+    known_good_commit: null
+
   romance-editor:
     role: retired             # superseded: editor stays in romance-training
     remote: null              # local-only; historical reference only

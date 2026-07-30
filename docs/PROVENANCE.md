@@ -18,6 +18,8 @@ So "readers dropped off at chapter 7" could not become "the `dark-fantasy` adapt
 
 **Design rule:** provenance is *reference data*, not content. MS does not need to render it; it needs to be able to **join on it**. Keep it minimal, stable, and privacy-clean (no PII — it describes *models and choices*, not readers).
 
+**Audiobook:** paragraph cues in `audio_manifest.json` join via the same `story_id` + `chapterNumber` / chapter-body `charStart`/`charEnd` space; engine/voice fields stay in the audio manifest and are **not** required for the RT feedback loop. See [contracts/AUDIOBOOK.md](contracts/AUDIOBOOK.md).
+
 ### Implementation status
 
 | Piece | Status |

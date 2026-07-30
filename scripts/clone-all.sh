@@ -13,6 +13,7 @@ REPOS=(
   "romance-training	git@github.com:okita-io/romance-training.git"
   "romance-factory	git@github.com:okita-io/romance-factory.git"
   "midnightsatin	git@github.com:okita-io/midnight-satin.git"
+  "romance-voice	git@github.com:okita-io/romance-voice.git"
   # romance-editor: retired (superseded; editor lives in romance-training)
 )
 
