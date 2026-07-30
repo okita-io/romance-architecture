@@ -31,7 +31,7 @@ Cheap, additive work that gates everything downstream. The RF→MS handoff is in
 | **RT-3** | RT | Open | Store span **char offsets** + a segmentation version so span ids stay joinable across re-chunking | IDENTIFIERS §6 |
 | **RF-3** | RF | Open | Confirm `act_number` is **global** across the story; ensure **bridge acts** get their own `act_number` (addressable card/provenance) | IDENTIFIERS §6 |
 | **RT-4** | RT | Open | Decide whether the writer targets `mind_style` / `cohesion` / `lexical_complexity`, or they stay grade-only | STEERING_CARD §7 |
-| **RV-1** | RV | Open | First live VoxCPM synth on Spark (`scripts/smoke_tts.sh`); confirm load/unload + tunnel `:18081` | ARCHITECTURE (RF ↔ RV) |
+| **RV-1** | RV | **Done** | First live VoxCPM synth on Spark (`scripts/smoke_tts.sh`); confirm load/unload + tunnel `:18081` | ARCHITECTURE (RF ↔ RV) |
 | **RV-2** | RV | Open | **Alignment bridge:** after synth, run stable-ts (`voxcpm[timestamps]`) → roll word starts to paragraphs → write `cues[]` into `audio_manifest.json`; fail closed without cues; unload VoxCPM before/around align as VRAM requires | AUDIOBOOK §4b |
 | **RF-4** | RF | Open | HTTP client for romance-voice: upload story zip / manuscript → poll job → land `audio/` + cued `audio_manifest.json` on the story tree | ARCHITECTURE (RF ↔ RV); RV `AGENTS.md` |
 | **RF-5** | RF | Open | Include `audio/` (MP3s + cued manifest) in phase 15b / `romance-bundle.zip` (required for a complete bundle) | AUDIOBOOK §3–4 |

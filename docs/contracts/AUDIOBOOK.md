@@ -207,7 +207,7 @@ MS-3 ingest (blob MP3s + Neon cues) → MS-4 unlock + player + jump-sync + backg
 |-------|--------|---------|
 | Product rules (this contract) | **Adopted** | DEC-4 |
 | Cues in Neon, MP3s in blob | **Adopted** | DEC-5 |
-| Live VoxCPM on Spark | Open | RV-1 |
+| Live VoxCPM on Spark | Done | RV-1 |
 | Forced-alignment → paragraph cues on Spark | Open | RV-2 |
 | RF HTTP client → land `audio/` | Open | RF-4 |
 | Include cued `audio/` in publish bundle | Open | RF-5 |
