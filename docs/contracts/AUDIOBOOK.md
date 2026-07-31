@@ -2,8 +2,8 @@
 
 **Status:** Adopted (Jul 2026) — product rules locked; RF/RV cues + MS ingest/player still open
 **Spans:** romance-voice (RV) · romance-factory (RF) · midnight-satin (MS)
-**Scope:** New generations only — audiobook is a required part of a complete publish bundle (see [ARCHITECTURE.md](../ARCHITECTURE.md)).
-**Related:** [IDENTIFIERS.md](IDENTIFIERS.md), [PROVENANCE.md](../PROVENANCE.md), [ARCHITECTURE.md](../ARCHITECTURE.md), MS `docs/ROMANCE_FACTORY_INGEST.md` (MS-3 will extend)
+**Scope:** New generations only — audiobook is a required part of a complete publish bundle (see [ARCHITECTURE.md](../ARCHITECTURE.md)). Today TTS remains a post-pipeline workflow until RF-5 lands `audio/` in phase 15b.
+**Related:** [IDENTIFIERS.md](IDENTIFIERS.md), [PROVENANCE.md](../PROVENANCE.md), [ARCHITECTURE.md](../ARCHITECTURE.md); MS ingest docs (MS-3 will extend)
 
 How narrated audio is produced, packaged into the story bundle, unlocked in Midnight Satin, and kept in sync with the reading room.
 

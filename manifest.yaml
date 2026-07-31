@@ -15,29 +15,36 @@ layout:
 
 repos:
   romance-training:
-    role: training            # judge / editor / writer models
+    role: training            # judge / classifier today; editor + writer products planned
     remote: git@github.com:okita-io/romance-training.git
     default_branch: master
-    known_good_commit: null   # e.g. RT commit verified compatible with the tuple below
+    # Snapshot of co-located checkout as of 2026-07-31 (not a formal release pin).
+    known_good_commit: 908dcd3ef7405fd6a526c362b625fd5070328601
 
   romance-factory:
-    role: harness             # runs models, produces story bundles
+    role: harness             # 15-phase generate pipeline; story bundles + provenance
     remote: git@github.com:okita-io/romance-factory.git
     default_branch: main
-    known_good_commit: null
+    known_good_commit: d9409ab516bc5e9b28ce9c480ed840c300bc7ad1
+
+  romance-monitor:
+    role: observability       # LAN live GUI for parallel RF generates (fail-open ingest)
+    remote: git@github.com:okita-io/romance-monitor.git
+    default_branch: main
+    known_good_commit: 393bca12a12e3f8fbaa629a9ce648bbe7d3578b2
 
   midnight-satin:
     role: frontend            # reader web app (Vercel / Neon)
-    remote: git@github.com:okita-io/midnight-satin.git  # migrated from badkangaroo/Midnight-Satin (Jul 2026); private
-    default_branch: master    # branches migrated: master, beta, development, releases (cursor/* not carried over)
-    checkout_dir: midnightsatin  # local sibling dir name (no hyphen)
-    known_good_commit: null
+    remote: git@github.com:okita-io/midnight-satin.git  # intended; some checkouts still track badkangaroo/Midnight-Satin
+    default_branch: master    # branches: master, beta, development, releases
+    checkout_dir: midnight-satin  # hyphenated; older clone-all used midnightsatin
+    known_good_commit: e9107b7580842af88d89e86a9ceea92071441633
 
   romance-voice:
     role: tts                 # Spark-resident audiobook TTS (VoxCPM); RF/RT upload → MP3
     remote: git@github.com:okita-io/romance-voice.git
     default_branch: main
-    known_good_commit: null
+    known_good_commit: 876b83c63626755f1beffd59881b158b3cd9587d
 
   romance-editor:
     role: retired             # superseded: editor stays in romance-training

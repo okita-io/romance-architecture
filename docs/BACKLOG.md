@@ -1,6 +1,6 @@
 # Backlog — cross-system convergence
 
-Tasks that originate here (the coordination hub) because they **span repos** or fall out of the [contracts](contracts/). Each is executed in its **owning repo**; this board is the source of truth for what's blocking MS/RF/RT/RV convergence and in what order.
+Tasks that originate here (the coordination hub) because they **span repos** or fall out of the [contracts](contracts/). Each is executed in its **owning repo**; this board is the source of truth for what's blocking MS/RF/RT/RV/RM convergence and in what order.
 
 Legend: **owner** = repo that does the work · **unblocks** = what it enables · **src** = contract it comes from.
 Convention: new-generations-only (see [ARCHITECTURE.md → Standing conventions](ARCHITECTURE.md#standing-conventions)).
@@ -9,16 +9,16 @@ Convention: new-generations-only (see [ARCHITECTURE.md → Standing conventions]
 
 ## P0 — Unblock the feedback loop
 
-Cheap, additive work that gates everything downstream. The RF→MS handoff is in place; **RT version stamps** are the remaining identity gap before the first calibration report.
+Cheap, additive work that gates everything downstream. **RF emits** `story_id` + `provenance/`; **MS must store** the join, and **RT must stamp** model versions, before the first calibration report.
 
 | id | owner | status | task | unblocks | src |
 |----|-------|--------|------|----------|-----|
 | **RF-1** | RF | **Done** | Mint a stable **`story_id`** (UUID) at story creation; write it into genesis + `manuscript_metadata.json` + `publish_manifest.json` | the anchor for every cross-system join | IDENTIFIERS §2 |
 | **RF-2** | RF | **Done** | Record **per-act provenance** + **act→chapter stitch char offsets**; emit `provenance/` in the bundle keyed by `story_id` | localizing per-chapter reader signal to an act/card | IDENTIFIERS §3, PROVENANCE |
-| **MS-1** | MS | **Done** | Store `novels.rf_story_id` + nullable `chapters.rf_provenance` (acts[] JSONB); importer populates from the bundle | the join lives somewhere queryable | PROVENANCE §MS |
+| **MS-1** | MS | **Open** | Store `novels.rf_story_id` + nullable `chapters.rf_provenance` (acts[] JSONB); importer populates from the bundle (DEC-2 schema) | the join lives somewhere queryable | PROVENANCE §MS |
 | **RT-1** | RT | **Open** | Assign **stable version ids** to shipped artifacts (`base_version`, `adapter_version`, `editor_version`, `judge_version`) | attributing outcomes to a model version (RF currently emits these as `null`) | PROVENANCE §RT |
 
-**When RT-1 lands:** run the first **calibration report** — does `editor_card_hit` / `judge_score` correlate with reader completion/unlocks? (measurement only, no training yet). — *owner: RT*
+**When MS-1 + RT-1 land:** run the first **calibration report** — does `editor_card_hit` / `judge_score` correlate with reader completion/unlocks? (measurement only, no training yet). — *owner: RT*
 
 ---
 
@@ -35,14 +35,15 @@ Cheap, additive work that gates everything downstream. The RF→MS handoff is in
 | **RV-2** | RV | Open | **Alignment bridge:** after synth, run stable-ts (`voxcpm[timestamps]`) → roll word starts to paragraphs → write `cues[]` into `audio_manifest.json`; fail closed without cues; unload VoxCPM before/around align as VRAM requires | AUDIOBOOK §4b |
 | **RF-4** | RF | Open | HTTP client for romance-voice: upload story zip / manuscript → poll job → land `audio/` + cued `audio_manifest.json` on the story tree | ARCHITECTURE (RF ↔ RV); RV `AGENTS.md` |
 | **RF-5** | RF | Open | Include `audio/` (MP3s + cued manifest) in phase 15b / `romance-bundle.zip` (required for a complete bundle) | AUDIOBOOK §3–4 |
-| **MS-3** | MS | Open | **Parallel track:** ingest MP3s → **Vercel Blob**; paragraph cues → **Neon JSONB**; store asset URLs; extend `ROMANCE_FACTORY_INGEST.md` / GAPS (fail closed without cues) | AUDIOBOOK §5, DEC-5 |
+| **MS-3** | MS | Open | **Parallel track:** ingest MP3s → **Vercel Blob**; paragraph cues → **Neon JSONB**; store asset URLs; extend ingest docs / GAPS (fail closed without cues) | AUDIOBOOK §5, DEC-5 |
 | **MS-4** | MS | Open | **Parallel track:** 1-credit `audiobook_unlock`; player streams blob MP3s, consumes Neon cues; Veil-capped chapters; paragraph jump-sync; background playback (Media Session) | AUDIOBOOK §1, §5 |
+| **RM-1** | RM / RF | **Done** | RF `generate.live_monitor` publisher + RM ingest/WS SPA (fail-open; LAN `:7788`) | ARCHITECTURE (RF → RM) |
 
 ---
 
 ## P2 — Close the loop (once MS has readers)
 
-The feedback loop that step 19-21 of the [README lifecycle](../README.md#end-to-end-lifecycle-step-by-step) diagram depicts. These are **gated on MS having live human readers** and on RT-1 landing so outcomes join to a model *version*. Until then the signal tables exist but there is nothing to export.
+The feedback loop that step 19-21 of the [README lifecycle](../README.md#end-to-end-lifecycle-step-by-step) diagram depicts. These are **gated on MS having live human readers** and on MS-1 + RT-1 landing so outcomes join to story structure and a model *version*. Until then the signal tables exist but there is nothing to export with provenance.
 
 | id | owner | status | task | unblocks | src |
 |----|-------|--------|------|----------|-----|
@@ -57,16 +58,18 @@ The feedback loop that step 19-21 of the [README lifecycle](../README.md#end-to-
 
 | id | decision | status | resolution | src |
 |----|----------|--------|------------|-----|
-| **DEC-1** | **Human-signal role** — calibration + curated preference data, or a tighter direct-optimization loop? | **Resolved** | Calibration-first until provenance fields are fully stamped (RT-1) and confounds are controlled; then curated preference data only | ARCHITECTURE (two-signal rule) |
-| **DEC-2** | MS provenance storage — columnized fields vs a single `acts[]` JSONB blob | **Resolved** | `novels.rf_story_id` + `chapters.rf_provenance` JSONB (`acts[]` + stitch offsets). No separate `chapter_provenance` table | PROVENANCE §MS |
+| **DEC-1** | **Human-signal role** — calibration + curated preference data, or a tighter direct-optimization loop? | **Resolved** | Calibration-first until provenance fields are fully stamped (MS-1 + RT-1) and confounds are controlled; then curated preference data only | ARCHITECTURE (two-signal rule) |
+| **DEC-2** | MS provenance storage — columnized fields vs a single `acts[]` JSONB blob | **Resolved** | `novels.rf_story_id` + `chapters.rf_provenance` JSONB (`acts[]` + stitch offsets). No separate `chapter_provenance` table. *(Implement under MS-1.)* | PROVENANCE §MS |
 | **DEC-3** | Where does Spark TTS live — inside RF, or a separate service repo? | **Resolved** | **romance-voice**: own repo + GPU tenant; RF keeps batch CLI / VoxCPM engine; RV owns HTTP serve. MS ingest of audio is contracted under DEC-4 | ARCHITECTURE (romance-voice) |
 | **DEC-4** | Audiobook in MS — bundle? unlock? Veil? sync? | **Resolved** | Required `audio/` in publish bundle; **1 credit** novel-level unlock; play only Veil-unlocked chapters; **paragraph jump-sync** (not continuous scroll); **background** playback | AUDIOBOOK; ARCHITECTURE |
 | **DEC-5** | Audiobook assets — blob vs Neon? | **Resolved** | **MP3s → Vercel Blob** (stream/CDN). **Paragraph cues → Neon JSONB** (small; hydrate + authz with reading room). Bundle `audio_manifest.json` is import source of truth only | AUDIOBOOK §5 |
+| **DEC-6** | Where does live generate observability live? | **Resolved** | **romance-monitor**: own Node repo + LAN `:7788`; RF `live_monitor` publisher fail-open; not on publish/training path | ARCHITECTURE (romance-monitor) |
 
 ---
 
 ## Notes
 
-- **Sequencing (updated):** RF-1 → RF-2 → MS-1 are shipped. Next: **RT-1**, then the first calibration report. P1 audiobook is **two parallel tracks:** Track A `RV-1 → RV-2 → RF-4 → RF-5`; Track B `MS-3 → MS-4` (may stub fixtures until Track A lands). **P2** (MS-2 export → RT-5 calibration) waits on live MS readers + RT-1.
-- Related MS consumer work (not owned here): transactional / idempotent re-import by `rf_story_id` — see MS `docs/ROMANCE_FACTORY_GAPS.md`.
+- **Sequencing (updated Jul 31 2026):** RF-1 → RF-2 are shipped. Next P0: **MS-1** (store join) and **RT-1** (version ids), then the first calibration report. P1 audiobook is **two parallel tracks:** Track A `RV-1 (done) → RV-2 → RF-4 → RF-5`; Track B `MS-3 → MS-4` (may stub fixtures until Track A lands). RM-1 is shipped (operator tool). **P2** (MS-2 export → RT-5 calibration) waits on live MS readers + MS-1 + RT-1.
+- Related MS consumer work (not owned here): transactional / idempotent re-import by `rf_story_id` — see RF `docs/design/midnightsatin-gaps.md` / MS ingest docs when present.
+- RF pipeline is **15 phases** with story-frame world cards default-on; see [ARCHITECTURE.md](ARCHITECTURE.md).
 - This board is **task origination**, not a project tracker — once an item is picked up, it lives in its owning repo's issues/PRs. Check items off here when the owning repo ships them.

@@ -1,6 +1,6 @@
 # Per-Story Provenance Contract
 
-**Status:** Adopted (Jul 2026) — RF+MS handoff shipped; RT version stamps still open
+**Status:** Adopted (Jul 2026) — RF emit shipped; MS store + RT version stamps still open
 **Spans:** romance-training (RT) → romance-factory (RF) → midnight-satin (MS)
 **Scope:** New generations only — forward-only, no backfill of legacy RF `stories/` or already-imported MS novels (see [ARCHITECTURE.md → Standing conventions](ARCHITECTURE.md#standing-conventions)).
 **Purpose:** Make every reader outcome **joinable** to the generation choices that produced it, so the backward feedback loop ([ARCHITECTURE.md](ARCHITECTURE.md)) is possible at all.
@@ -26,8 +26,8 @@ So "readers dropped off at chapter 7" could not become "the `dark-fantasy` adapt
 |-------|--------|
 | RF `story_id` (UUID) in genesis / metadata / manifest | **Shipped** (RF-1) |
 | RF `provenance/story.json` + `provenance/chapter_NN.json` with act stitch offsets | **Shipped** (RF-2); version/grade fields often `null` until RT-1 + grade wiring |
-| MS `novels.rf_story_id` + `chapters.rf_provenance` JSONB | **Shipped** (MS-1; migration `012_add_rf_provenance.sql`) |
-| RT stable `*_version` ids on shipped artifacts | **Open** (RT-1) — the remaining identity gap |
+| MS `novels.rf_story_id` + `chapters.rf_provenance` JSONB | **Open** (MS-1; DEC-2 schema decided — migration + importer not in MS yet) |
+| RT stable `*_version` ids on shipped artifacts | **Open** (RT-1) — remaining model-identity gap |
 | MS export / RT calibration report | **Open** (post-P0) — MS-2 (scheduled export) → RT-5 (calibration report); see [BACKLOG.md](BACKLOG.md#p2--close-the-loop-once-ms-has-readers) |
 
 ---
@@ -99,11 +99,11 @@ On the wire (bundle + MS JSONB), this is flattened into **per-act** objects insi
     │                          #    char_start, char_end}, ... ] }
 ```
 
-Coordinate space for stitch offsets is `stitched_acts_stripped` (raw `\n\n`-joined stripped act bodies). This is additive — it does not change existing ingest fields (MS `ROMANCE_FACTORY_INGEST.md`).
+Coordinate space for stitch offsets is `stitched_acts_stripped` (raw `\n\n`-joined stripped act bodies). This is additive — it does not change existing ingest fields.
 
 ### MS (midnight-satin) — *store a join key*
 
-MS need not render provenance, but must let RT join reader signal to it. **Adopted schema** (DEC-2 resolved — columns + `acts[]` JSONB on the chapter row; no separate provenance table):
+MS need not render provenance, but must let RT join reader signal to it. **Adopted schema** (DEC-2 resolved — columns + `acts[]` JSONB on the chapter row; no separate provenance table). **Implementation: MS-1 (open).**
 
 ```sql
 -- novels: RF story anchor (unique when present)
@@ -120,7 +120,7 @@ ALTER TABLE chapters ADD COLUMN rf_provenance JSONB;
 
 Resolution for `rf_story_id` (first match wins): `provenance/story.json` → `publish_manifest.story_id` → `manuscript_metadata.story_id`.
 
-Populated by the RF importer (`scripts/import-romance-factory-story.mjs` via `scripts/lib/rf-provenance.mjs`). Existing rows without provenance stay `NULL` — nothing breaks. See MS migration `012_add_rf_provenance.sql` and `docs/ROMANCE_FACTORY_INGEST.md`.
+Populated by the RF importer once MS-1 lands. Existing rows without provenance stay `NULL` — nothing breaks. See [BACKLOG.md](BACKLOG.md).
 
 ---
 
@@ -157,7 +157,7 @@ This is exactly what powers:
 ## Rollout (smallest first)
 
 1. ~~**RF:** mint `story_id` + write `provenance/` into the bundle.~~ **Done** (RF-1, RF-2).
-2. ~~**MS:** store `rf_story_id` + `rf_provenance`; importer population.~~ **Done** (MS-1).
+2. **MS:** store `rf_story_id` + `rf_provenance`; importer population (MS-1).
 3. **RT:** assign stable version ids to shipped artifacts (RT-1) so RF can stop emitting `null` for `*_version` fields.
 4. **RT:** build the join + a first calibration report (editor score vs reader completion). No model training yet — just measure whether the proxy holds.
 

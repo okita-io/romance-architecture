@@ -1,6 +1,6 @@
 # Identifier & Segmentation Contract
 
-**Status:** Adopted (Jul 2026) — `story_id` + stitch offsets shipped in RF; MS stores the join
+**Status:** Adopted (Jul 2026) — `story_id` + stitch offsets shipped in RF; MS store (MS-1) still open
 **Spans:** romance-training (RT) · romance-factory (RF) · midnight-satin (MS)
 **Scope:** New generations only — legacy RF `stories/` are unsupported (see [ARCHITECTURE.md → Standing conventions](../ARCHITECTURE.md#standing-conventions)).
 **Related:** [STEERING_CARD.md](STEERING_CARD.md), [PROVENANCE.md](../PROVENANCE.md), [ARCHITECTURE.md](../ARCHITECTURE.md)
@@ -39,7 +39,7 @@ story  ─▶  chapter  ─▶  act  ─▶  span  ─▶  sentence
 
 ### The `story_id` anchor
 
-**Shipped (RF-1 / MS-1):** RF mints a stable `story_id` (UUID) at story creation (`ensure_story_id`), writes it into genesis + `manuscript_metadata.json` + `publish_manifest.json` (+ `provenance/story.json`), and MS stores it on the novel as `novels.rf_story_id`. MS still mints its own `novelId` at import; `rf_story_id` is the durable cross-system join. Everything else in this document hangs off `story_id`.
+**Shipped (RF-1):** RF mints a stable `story_id` (UUID) at story creation (`ensure_story_id`), writes it into genesis + `manuscript_metadata.json` + `publish_manifest.json` (+ `provenance/story.json`). **Open (MS-1):** MS should store it as `novels.rf_story_id` (DEC-2); MS still mints its own `novelId` at import — `rf_story_id` is the durable cross-system join once persisted. Everything else in this document hangs off `story_id`.
 
 ---
 
@@ -84,14 +84,14 @@ Without these offsets, per-chapter reader signal cannot localize to the act (and
 |--------|------|
 | **RF** | Mints `story_id`; assigns `chapter_number` + `act_number`; records **stitch offsets**; owns outline structure (acts, beats, scene types). |
 | **RT** | Segments act prose into spans/sentences (editor grains); grades attach to act/span ids; stores span **char offsets** for stability. |
-| **MS** | Stores `story_id` (`rf_story_id`) + `chapter_number`; captures `reading_progress` at chapter + `scroll_percent`; joins to acts via offsets. |
+| **MS** | Will store `story_id` (`rf_story_id`) + `chapter_number` (MS-1); captures `reading_progress` at chapter + `scroll_percent`; joins to acts via offsets once provenance is persisted. |
 | **This contract** | The shared hierarchy, the id scheme, and the stitch-offset requirement. |
 
 ---
 
 ## 6. Open items
 
-- ~~**`story_id` minting + propagation**~~ — **Done** (RF-1 / MS-1).
+- ~~**`story_id` minting + RF propagation**~~ — **Done** (RF-1). **MS persistence** still open (MS-1).
 - **Act numbering** — this contract assumes `act_number` is **global** across the story (consistent with RF `story_state`'s story-wide `planted_act` / `RomanceMilestone.act`) and grouped into chapters. Confirm no per-chapter act re-numbering exists in the new pipeline (BACKLOG RF-3).
 - **Span stability** — RT chunk boundaries move if re-chunked; store char offsets and a segmentation version so span ids remain joinable (BACKLOG RT-3).
 - **Bridge acts** — confirm bridge/transition acts get their own `act_number` (they should, so their card/provenance is addressable) rather than being merged into a neighbor at stitch time (BACKLOG RF-3).
