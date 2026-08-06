@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Romance Story Roulette</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Romance Story Roulette</h1>
+      <p class="subtitle">Spin the wheel of 36 billion possible romance stories</p>
+    </header>
+
+    <div class="controls">
+      <button id="randomize-btn" type="button">Randomize All</button>
+    </div>
+
+    <div class="grid">
+      <!-- World Setting -->
+      <div class="card">
+        <label for="world-setting">World Setting</label>
+        <select id="world-setting">
+          <option value="">-- Pick a world --</option>
+        </select>
+        <p class="description" id="world-desc"></p>
+      </div>
+
+      <!-- Plot Function -->
+      <div class="card">
+        <label for="plot-function">Plot Function</label>
+        <select id="plot-function">
+          <option value="">-- Pick a plot --</option>
+        </select>
+        <p class="description" id="plot-desc"></p>
+      </div>
+
+      <!-- Protagonist -->
+      <div class="card protagonist">
+        <h3>Protagonist</h3>
+        <label for="protag-trope">Character Trope</label>
+        <select id="protag-trope">
+          <option value="">-- Pick a trope --</option>
+        </select>
+        <label for="protag-combo">Personality Combo</label>
+        <select id="protag-combo">
+          <option value="">-- Pick a combo --</option>
+        </select>
+        <p class="description" id="protag-desc"></p>
+      </div>
+
+      <!-- Love Interest -->
+      <div class="card love-interest">
+        <h3>Love Interest</h3>
+        <label for="love-trope">Character Trope</label>
+        <select id="love-trope">
+          <option value="">-- Pick a trope --</option>
+        </select>
+        <label for="love-combo">Personality Combo</label>
+        <select id="love-combo">
+          <option value="">-- Pick a combo --</option>
+        </select>
+        <p class="description" id="love-desc"></p>
+      </div>
+    </div>
+
+    <!-- Generate Prompt -->
+    <div class="generate-section">
+      <button id="generate-btn" type="button">Generate Story Prompt</button>
+    </div>
+
+    <!-- Output -->
+    <div class="output-section" id="output-section" hidden>
+      <h2>Your Romance Story Prompt</h2>
+      <div class="prompt-box" id="prompt-output"></div>
+      <button id="copy-btn" type="button">Copy to Clipboard</button>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
