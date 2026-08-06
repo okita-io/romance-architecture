@@ -221,3 +221,17 @@ const PERSONALITY_COMBOS = {
   "motherly-caregiver+tsundere-spitfire": "Stoic Guardian",
   "motherly-caregiver+obsessive-yandere": "Devoted Guardian"
 };
+
+const ROMANCE_TROPES = {
+  "opposites-attract": "Two characters who should hate each other based on everything they represent, but find themselves drawn together by proximity or necessity. Stuck together, accidental touches, forced proximity, at first reluctant, then wanting.",
+  "second-chance": "Two former partners reunite after years of estrangement due to past misunderstandings, secrets, or unresolved betrayals. The central tension arises from the conflict between old feelings that never fully faded and new scars developed in each other's absence.",
+  "forbidden-love": "Two characters whose attraction is complicated by an external force that deems their relationship improper or dangerous — be it class divides, warring families, strict codes, professional boundaries, or political ideologies.",
+  "age-gap": "Two characters with a significant difference in chronological ages. One partner offers stability, wisdom, and maturity while the other provides energy, idealism, and fresh passion. Tension arises from societal stigma and differing life priorities.",
+  "enemies-to-lovers": "Two characters who begin as antagonists — rival colleagues, former friends torn apart by betrayal, or members of opposing factions. Their volatility masks underlying tension that evolves into attraction over time through forced collaboration.",
+  "friends-to-lovers": "Two characters with an established foundation of trust and affection who develop romantic feelings. The core tension stems from the fear that acting on those feelings might jeopardize their precious friendship.",
+  "the-slow-burn": "An intense romantic attraction that develops gradually, characterized by simmering tension and a prolonged 'will-they-won't-they' dynamic. External barriers, internal fears, or societal norms keep them from acting on desires.",
+  "fake-dating": "Two characters enter into a performative romantic ruse for mutually beneficial reasons. Forced intimacy during their 'performance' compels them to share secrets and vulnerability, with genuine feelings emerging behind closed doors.",
+  "fated-mates": "Two characters bound by an inexorable supernatural or cosmic force that dictates they are meant to be together. The predestined connection creates immediate, overwhelming attraction but introduces tension around agency and free will.",
+  "marriage-of-convenience": "Two characters who enter into a formal union not for love, but to achieve practical goals. Initially transactional and emotionally distant, forced proximity necessitates intimacy as they share space, secrets, and vulnerabilities.",
+  "boss-employee": "A dynamic defined by an inherent power imbalance that complicates mutual attraction. The tension stems from professional boundaries, company policy, or fear of jeopardizing career or reputation."
+};

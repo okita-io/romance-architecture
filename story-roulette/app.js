@@ -6,6 +6,7 @@
   // --- DOM refs ---
   const worldSelect = document.getElementById('world-setting');
   const plotSelect = document.getElementById('plot-function');
+  const romanceTropeSelect = document.getElementById('romance-trope');
   const protagTropeSelect = document.getElementById('protag-trope');
   const protagComboSelect = document.getElementById('protag-combo');
   const loveTropeSelect = document.getElementById('love-trope');
@@ -13,6 +14,7 @@
 
   const worldDesc = document.getElementById('world-desc');
   const plotDesc = document.getElementById('plot-desc');
+  const romanceDesc = document.getElementById('romance-desc');
   const protagDesc = document.getElementById('protag-desc');
   const loveDesc = document.getElementById('love-desc');
 
@@ -63,6 +65,7 @@
   // --- Initialize dropdowns ---
   populateSelect(worldSelect, WORLD_SETTINGS, '-- Pick a world --');
   populateSelect(plotSelect, PLOT_FUNCTIONS, '-- Pick a plot --');
+  populateSelect(romanceTropeSelect, ROMANCE_TROPES, '-- Pick a romance trope --');
   populateSelect(protagTropeSelect, CHARACTER_TROPES, '-- Pick a trope --');
   populateSelect(loveTropeSelect, CHARACTER_TROPES, '-- Pick a trope --');
   populateComboSelect(protagComboSelect);
@@ -75,6 +78,10 @@
 
   plotSelect.addEventListener('change', () => {
     plotDesc.textContent = PLOT_FUNCTIONS[plotSelect.value] || '';
+  });
+
+  romanceTropeSelect.addEventListener('change', () => {
+    romanceDesc.textContent = ROMANCE_TROPES[romanceTropeSelect.value] || '';
   });
 
   protagTropeSelect.addEventListener('change', () => {
@@ -103,11 +110,12 @@
   // --- Randomize ---
   randomizeBtn.addEventListener('click', () => {
     // Add shake animation
-    document.querySelector('.grid').classList.add('shaking');
-    setTimeout(() => document.querySelector('.grid').classList.remove('shaking'), 400);
+    document.querySelectorAll('.grid').forEach(g => g.classList.add('shaking'));
+    setTimeout(() => document.querySelectorAll('.grid').forEach(g => g.classList.remove('shaking')), 400);
 
     setSelectValue(worldSelect, randomChoice(WORLD_SETTINGS));
     setSelectValue(plotSelect, randomChoice(PLOT_FUNCTIONS));
+    setSelectValue(romanceTropeSelect, randomChoice(ROMANCE_TROPES));
     setSelectValue(protagTropeSelect, randomChoice(CHARACTER_TROPES));
     setSelectValue(protagComboSelect, randomChoice(PERSONALITY_COMBOS));
     setSelectValue(loveTropeSelect, randomChoice(CHARACTER_TROPES));
@@ -118,18 +126,20 @@
   generateBtn.addEventListener('click', () => {
     const world = worldSelect.value;
     const plot = plotSelect.value;
+    const romance = romanceTropeSelect.value;
     const pTrope = protagTropeSelect.value;
     const pCombo = protagComboSelect.value;
     const lTrope = loveTropeSelect.value;
     const lCombo = loveComboSelect.value;
 
-    if (!world || !plot || !pTrope || !pCombo || !lTrope || !lCombo) {
+    if (!world || !plot || !romance || !pTrope || !pCombo || !lTrope || !lCombo) {
       alert('Please select all options (or hit Randomize) before generating!');
       return;
     }
 
     const worldName = prettifyKey(world);
     const plotName = prettifyKey(plot);
+    const romanceName = prettifyKey(romance);
     const pTropeName = prettifyKey(pTrope);
     const pComboName = PERSONALITY_COMBOS[pCombo];
     const lTropeName = prettifyKey(lTrope);
@@ -142,6 +152,9 @@ ${WORLD_SETTINGS[world]}
 
 PLOT FUNCTION: ${plotName}
 ${PLOT_FUNCTIONS[plot]}
+
+ROMANCE TROPE: ${romanceName}
+${ROMANCE_TROPES[romance]}
 
 PROTAGONIST:
 - Character Trope: ${pTropeName}
@@ -168,7 +181,24 @@ Make it fun, vivid, and lean into the absurdity of this particular combination. 
 
   // --- Copy ---
   copyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(promptOutput.textContent).then(() => {
+    const text = promptOutput.textContent;
+    if (!text) return;
+
+    navigator.clipboard.writeText(text).then(() => {
+      const originalText = copyBtn.textContent;
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
+    }).catch(() => {
+      // Fallback for insecure contexts (file://, unfocused tab, etc.)
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+
       const originalText = copyBtn.textContent;
       copyBtn.textContent = 'Copied!';
       setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
