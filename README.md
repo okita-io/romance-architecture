@@ -207,3 +207,18 @@ Each axis is independently authored and versioned, meaning adding a single new w
 | +1 personality combo | +475,407,360 |
 
 This multiplicative growth is the project's core strategic advantage: small, independently authored additions to any single axis produce billions of new story possibilities without requiring cross-axis coordination.
+
+### Forced creativity (story-roulette → generate CLI)
+
+Smaller LLMs habitually pick *in-kind* stacks (fantasy world + magic school + teacher-student + prodigy + protective mentor). To break that habit, [`story-roulette/`](story-roulette/) randomizes the six axes and emits a ready-to-paste **romance-factory** command:
+
+```bash
+python -m romance_factory.generate \
+  --world wild-west \
+  --plot the-long-journey \
+  --trope fated-mates \
+  --protagonist paranormal-fae steadfast-observer \
+  --love-interest secretly-demonlord wandering-shepherd
+```
+
+Append `--llm-preset …` and `--story-path …` in the terminal. Personality dropdowns only offer combos that map to factory archetype slugs.

@@ -3,6 +3,21 @@
 (function () {
   'use strict';
 
+  // Factory archetype slug ← romance-archetypes foundation (must stay in sync
+  // with romance_factory.generate.story_arc.combo_ladder.ARCHETYPE_FOUNDATION_SLUGS).
+  const FOUNDATION_TO_ARCHETYPE = {
+    'aristocrat-noble': 'aristocrat',
+    'bold-dramatic': 'bold',
+    'secretive-enigma': 'enigma',
+    'unpredictable-freespirit': 'freespirit',
+    'supergenius-intelectual': 'genius',
+    'zealous-passionate': 'passionate',
+    'shy-submissive': 'shy',
+    'reserved-stoic': 'stoic',
+    'tsundere-spitfire': 'tsundere',
+    'obsessive-yandere': 'yandere',
+  };
+
   // --- DOM refs ---
   const worldSelect = document.getElementById('world-setting');
   const plotSelect = document.getElementById('plot-function');
@@ -20,9 +35,12 @@
 
   const randomizeBtn = document.getElementById('randomize-btn');
   const generateBtn = document.getElementById('generate-btn');
-  const copyBtn = document.getElementById('copy-btn');
+  const copyCliBtn = document.getElementById('copy-cli-btn');
+  const copyPromptBtn = document.getElementById('copy-prompt-btn');
   const outputSection = document.getElementById('output-section');
+  const cliOutput = document.getElementById('cli-output');
   const promptOutput = document.getElementById('prompt-output');
+  const outputHint = document.getElementById('output-hint');
 
   // --- Helpers ---
   function prettifyKey(key) {
@@ -30,6 +48,44 @@
       .split('-')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1))
       .join(' ');
+  }
+
+  function slugifyName(name) {
+    return String(name || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function isFactoryMappableCombo(comboKey) {
+    const parts = String(comboKey).split('+');
+    if (parts.length !== 2) return false;
+    return parts.every(p => Boolean(FOUNDATION_TO_ARCHETYPE[p]));
+  }
+
+  function factoryMappableCombos() {
+    const out = {};
+    for (const [key, name] of Object.entries(PERSONALITY_COMBOS)) {
+      if (isFactoryMappableCombo(key)) out[key] = name;
+    }
+    return out;
+  }
+
+  function comboCliToken(comboKey) {
+    const name = PERSONALITY_COMBOS[comboKey];
+    const slug = slugifyName(name);
+    const mappable = factoryMappableCombos();
+    const sameName = Object.keys(mappable).filter(
+      k => slugifyName(mappable[k]) === slug
+    );
+    // Prefer the readable composite slug when unique among factory-mappable pairs.
+    if (sameName.length === 1) return slug;
+    return comboKey;
+  }
+
+  function shellQuote(token) {
+    if (/^[A-Za-z0-9_./:@+=,-]+$/.test(token)) return token;
+    return `'${String(token).replace(/'/g, `'\\''`)}'`;
   }
 
   function populateSelect(select, data, placeholder) {
@@ -44,7 +100,7 @@
 
   function populateComboSelect(select) {
     select.innerHTML = '<option value="">-- Pick a combo --</option>';
-    for (const [key, name] of Object.entries(PERSONALITY_COMBOS)) {
+    for (const [key, name] of Object.entries(factoryMappableCombos())) {
       const opt = document.createElement('option');
       opt.value = key;
       opt.textContent = name;
@@ -89,7 +145,6 @@
   });
 
   protagComboSelect.addEventListener('change', () => {
-    // Show the combo name in desc area if a trope is also selected
     if (protagComboSelect.value) {
       const name = PERSONALITY_COMBOS[protagComboSelect.value];
       protagDesc.textContent = name ? `Personality: "${name}"` : '';
@@ -109,34 +164,20 @@
 
   // --- Randomize ---
   randomizeBtn.addEventListener('click', () => {
-    // Add shake animation
     document.querySelectorAll('.grid').forEach(g => g.classList.add('shaking'));
     setTimeout(() => document.querySelectorAll('.grid').forEach(g => g.classList.remove('shaking')), 400);
 
+    const combos = factoryMappableCombos();
     setSelectValue(worldSelect, randomChoice(WORLD_SETTINGS));
     setSelectValue(plotSelect, randomChoice(PLOT_FUNCTIONS));
     setSelectValue(romanceTropeSelect, randomChoice(ROMANCE_TROPES));
     setSelectValue(protagTropeSelect, randomChoice(CHARACTER_TROPES));
-    setSelectValue(protagComboSelect, randomChoice(PERSONALITY_COMBOS));
+    setSelectValue(protagComboSelect, randomChoice(combos));
     setSelectValue(loveTropeSelect, randomChoice(CHARACTER_TROPES));
-    setSelectValue(loveComboSelect, randomChoice(PERSONALITY_COMBOS));
+    setSelectValue(loveComboSelect, randomChoice(combos));
   });
 
-  // --- Generate Prompt ---
-  generateBtn.addEventListener('click', () => {
-    const world = worldSelect.value;
-    const plot = plotSelect.value;
-    const romance = romanceTropeSelect.value;
-    const pTrope = protagTropeSelect.value;
-    const pCombo = protagComboSelect.value;
-    const lTrope = loveTropeSelect.value;
-    const lCombo = loveComboSelect.value;
-
-    if (!world || !plot || !romance || !pTrope || !pCombo || !lTrope || !lCombo) {
-      alert('Please select all options (or hit Randomize) before generating!');
-      return;
-    }
-
+  function buildStoryPrompt(world, plot, romance, pTrope, pCombo, lTrope, lCombo) {
     const worldName = prettifyKey(world);
     const plotName = prettifyKey(plot);
     const romanceName = prettifyKey(romance);
@@ -145,7 +186,7 @@
     const lTropeName = prettifyKey(lTrope);
     const lComboName = PERSONALITY_COMBOS[lCombo];
 
-    const prompt = `You are a creative fiction writer specializing in romance novels. Generate a fun, engaging 3-paragraph story summary for a romance novel with the following configuration:
+    return `You are a creative fiction writer specializing in romance novels. Generate a fun, engaging 3-paragraph story summary for a romance novel with the following configuration:
 
 WORLD SETTING: ${worldName}
 ${WORLD_SETTINGS[world]}
@@ -173,23 +214,18 @@ Write a 3-paragraph story summary that:
 3. Teases the romantic tension and hints at a satisfying (or hilariously complicated) resolution
 
 Make it fun, vivid, and lean into the absurdity of this particular combination. Give both characters names that fit the world. Keep it under 300 words.`;
+  }
 
-    promptOutput.textContent = prompt;
-    outputSection.hidden = false;
-    outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-
-  // --- Copy ---
-  copyBtn.addEventListener('click', () => {
-    const text = promptOutput.textContent;
+  function copyText(button, text) {
     if (!text) return;
 
-    navigator.clipboard.writeText(text).then(() => {
-      const originalText = copyBtn.textContent;
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
-    }).catch(() => {
-      // Fallback for insecure contexts (file://, unfocused tab, etc.)
+    const flash = () => {
+      const originalText = button.textContent;
+      button.textContent = 'Copied!';
+      setTimeout(() => { button.textContent = originalText; }, 2000);
+    };
+
+    navigator.clipboard.writeText(text).then(flash).catch(() => {
       const textarea = document.createElement('textarea');
       textarea.value = text;
       textarea.style.position = 'fixed';
@@ -198,10 +234,56 @@ Make it fun, vivid, and lean into the absurdity of this particular combination. 
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
-
-      const originalText = copyBtn.textContent;
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
+      flash();
     });
+  }
+
+  // --- Generate CLI + story prompt ---
+  generateBtn.addEventListener('click', () => {
+    const world = worldSelect.value;
+    const plot = plotSelect.value;
+    const romance = romanceTropeSelect.value;
+    const pTrope = protagTropeSelect.value;
+    const pCombo = protagComboSelect.value;
+    const lTrope = loveTropeSelect.value;
+    const lCombo = loveComboSelect.value;
+
+    if (!world || !plot || !romance || !pTrope || !pCombo || !lTrope || !lCombo) {
+      alert('Please select all options (or hit Randomize) before generating!');
+      return;
+    }
+
+    if (!isFactoryMappableCombo(pCombo) || !isFactoryMappableCombo(lCombo)) {
+      alert('Selected personality combo is not factory-mappable. Pick another combo (or Randomize).');
+      return;
+    }
+
+    const parts = [
+      'python -m romance_factory.generate',
+      `--world ${shellQuote(world)}`,
+      `--plot ${shellQuote(plot)}`,
+      `--trope ${shellQuote(romance)}`,
+      `--protagonist ${shellQuote(pTrope)} ${shellQuote(comboCliToken(pCombo))}`,
+      `--love-interest ${shellQuote(lTrope)} ${shellQuote(comboCliToken(lCombo))}`,
+    ];
+
+    cliOutput.textContent = parts.join(' ');
+    promptOutput.textContent = buildStoryPrompt(
+      world, plot, romance, pTrope, pCombo, lTrope, lCombo
+    );
+    if (outputHint) {
+      outputHint.textContent =
+        'Paste into a terminal, then append --llm-preset <name> and --story-path <dir>.';
+    }
+    outputSection.hidden = false;
+    outputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  copyCliBtn.addEventListener('click', () => {
+    copyText(copyCliBtn, cliOutput.textContent);
+  });
+
+  copyPromptBtn.addEventListener('click', () => {
+    copyText(copyPromptBtn, promptOutput.textContent);
   });
 })();

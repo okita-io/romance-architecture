@@ -206,10 +206,20 @@ header h1 {
   padding: 1.5rem;
 }
 
+.output-block + .output-block {
+  margin-top: 1.75rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
 .output-section h2 {
   font-size: 1.2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   color: var(--accent);
+}
+
+.output-section .subtitle {
+  margin-bottom: 0.75rem;
 }
 
 .prompt-box {
@@ -226,7 +236,13 @@ header h1 {
   margin-bottom: 1rem;
 }
 
-#copy-btn {
+#cli-output {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+#copy-cli-btn,
+#copy-prompt-btn {
   background: var(--accent-secondary);
   color: white;
   border: none;
@@ -237,7 +253,8 @@ header h1 {
   transition: opacity 0.15s;
 }
 
-#copy-btn:hover {
+#copy-cli-btn:hover,
+#copy-prompt-btn:hover {
   opacity: 0.85;
 }
 
