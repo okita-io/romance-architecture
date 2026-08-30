@@ -19,6 +19,7 @@
   };
 
   // --- DOM refs ---
+  const pairingSelect = document.getElementById('pairing');
   const worldSelect = document.getElementById('world-setting');
   const plotSelect = document.getElementById('plot-function');
   const romanceTropeSelect = document.getElementById('romance-trope');
@@ -27,6 +28,7 @@
   const loveTropeSelect = document.getElementById('love-trope');
   const loveComboSelect = document.getElementById('love-combo');
 
+  const pairingDesc = document.getElementById('pairing-desc');
   const worldDesc = document.getElementById('world-desc');
   const plotDesc = document.getElementById('plot-desc');
   const romanceDesc = document.getElementById('romance-desc');
@@ -128,6 +130,12 @@
   populateComboSelect(loveComboSelect);
 
   // --- Description updates ---
+  pairingSelect.addEventListener('change', () => {
+    pairingDesc.textContent = PAIRINGS[pairingSelect.value] || '';
+  });
+  // Initial pairing description
+  pairingDesc.textContent = PAIRINGS[pairingSelect.value] || PAIRINGS.het;
+
   worldSelect.addEventListener('change', () => {
     worldDesc.textContent = WORLD_SETTINGS[worldSelect.value] || '';
   });
@@ -168,6 +176,7 @@
     setTimeout(() => document.querySelectorAll('.grid').forEach(g => g.classList.remove('shaking')), 400);
 
     const combos = factoryMappableCombos();
+    setSelectValue(pairingSelect, randomChoice(PAIRINGS));
     setSelectValue(worldSelect, randomChoice(WORLD_SETTINGS));
     setSelectValue(plotSelect, randomChoice(PLOT_FUNCTIONS));
     setSelectValue(romanceTropeSelect, randomChoice(ROMANCE_TROPES));
@@ -177,7 +186,7 @@
     setSelectValue(loveComboSelect, randomChoice(combos));
   });
 
-  function buildStoryPrompt(world, plot, romance, pTrope, pCombo, lTrope, lCombo) {
+  function buildStoryPrompt(pairing, world, plot, romance, pTrope, pCombo, lTrope, lCombo) {
     const worldName = prettifyKey(world);
     const plotName = prettifyKey(plot);
     const romanceName = prettifyKey(romance);
@@ -185,8 +194,16 @@
     const pComboName = PERSONALITY_COMBOS[pCombo];
     const lTropeName = prettifyKey(lTrope);
     const lComboName = PERSONALITY_COMBOS[lCombo];
+    const isYaoi = pairing === 'yaoi';
+    const pairingBlock = isYaoi
+      ? `PAIRING: Yaoi / BL (male/male)
+Both the protagonist and the love interest are adult men. Use he/him for both. Do not write the protagonist as a woman or use she/her for either lead.`
+      : `PAIRING: Heterosexual (female protagonist + male love interest)
+The protagonist is a woman (she/her); the love interest is a man (he/him).`;
 
     return `You are a creative fiction writer specializing in romance novels. Generate a fun, engaging 3-paragraph story summary for a romance novel with the following configuration:
+
+${pairingBlock}
 
 WORLD SETTING: ${worldName}
 ${WORLD_SETTINGS[world]}
@@ -213,7 +230,7 @@ Write a 3-paragraph story summary that:
 2. Describes the central conflict driven by the plot function and how these two very different people collide
 3. Teases the romantic tension and hints at a satisfying (or hilariously complicated) resolution
 
-Make it fun, vivid, and lean into the absurdity of this particular combination. Give both characters names that fit the world. Keep it under 300 words.`;
+Make it fun, vivid, and lean into the absurdity of this particular combination. Give both characters names that fit the world${isYaoi ? ' (both men)' : ''}. Keep it under 300 words.`;
   }
 
   function copyText(button, text) {
@@ -240,6 +257,7 @@ Make it fun, vivid, and lean into the absurdity of this particular combination. 
 
   // --- Generate CLI + story prompt ---
   generateBtn.addEventListener('click', () => {
+    const pairing = pairingSelect.value || 'het';
     const world = worldSelect.value;
     const plot = plotSelect.value;
     const romance = romanceTropeSelect.value;
@@ -266,10 +284,13 @@ Make it fun, vivid, and lean into the absurdity of this particular combination. 
       `--protagonist ${shellQuote(pTrope)} ${shellQuote(comboCliToken(pCombo))}`,
       `--love-interest ${shellQuote(lTrope)} ${shellQuote(comboCliToken(lCombo))}`,
     ];
+    if (pairing === 'yaoi') {
+      parts.push('--pairing yaoi');
+    }
 
     cliOutput.textContent = parts.join(' ');
     promptOutput.textContent = buildStoryPrompt(
-      world, plot, romance, pTrope, pCombo, lTrope, lCombo
+      pairing, world, plot, romance, pTrope, pCombo, lTrope, lCombo
     );
     if (outputHint) {
       outputHint.textContent =

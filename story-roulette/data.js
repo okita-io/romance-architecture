@@ -1,3 +1,8 @@
+const PAIRINGS = {
+  "het": "Heterosexual (MF): female protagonist + male love interest. Default romance-factory pairing.",
+  "yaoi": "Yaoi / BL (MM): both leads are adult men. Forces Midnight Satin genre tag Yaoi."
+};
+
 const WORLD_SETTINGS = {
   "fantasy-adventure": "Dragons in lairs or dungeons protecting piles of gold treasure, magic weapons and gemstones. Elves and Dwarves, beast kin, kobolds, goblins and orcs e...",
   "superheroes": "Modern day setting with a select few humans with extra normal powers granted through the will of the plot. Given a super natural gift of flight, stren...",

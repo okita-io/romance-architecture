@@ -148,23 +148,25 @@ The RF→MS provenance handoff is **shipped** (`story_id`, `provenance/`, `rf_st
 
 ## Combinatorial design space
 
-The romance-factory's story generation draws from **six independent axes** defined across `romance-themes` and `romance-archetypes`. Each story selects one value per axis (with two independent character slots), producing an astronomically large configuration space that ensures virtually no two generated stories share the same structural DNA.
+The romance-factory's story generation draws from **seven independent axes** defined across `romance-themes`, `romance-archetypes`, and the factory pairing flag. Each story selects one value per axis (with two independent character slots), producing an astronomically large configuration space that ensures virtually no two generated stories share the same structural DNA.
 
 ### The axes
 
 | # | Axis | Source repo | Source file | Count |
 |---|------|-------------|-------------|------:|
-| 1 | **World Setting** | romance-themes | `artifacts/world_settings.json` | 18 |
-| 2 | **Plot Function** | romance-themes | `artifacts/plot_functions.json` | 10 |
-| 3 | **Romance Trope** | romance-themes | `artifacts/romance_tropes.json` | 11 |
-| 4 | **Character Trope** (per character) | romance-themes | `artifacts/character_tropes.json` | 28 |
-| 5 | **Personality Archetype Combo** (per character) | romance-archetypes | `artifacts/combos.json` | 153 |
+| 1 | **Pairing** | romance-factory | `--pairing` / `romance_pairing` | 2 (`het` default, `yaoi`) |
+| 2 | **World Setting** | romance-themes | `artifacts/world_settings.json` | 18 |
+| 3 | **Plot Function** | romance-themes | `artifacts/plot_functions.json` | 10 |
+| 4 | **Romance Trope** | romance-themes | `artifacts/romance_tropes.json` | 11 |
+| 5 | **Character Trope** (per character) | romance-themes | `artifacts/character_tropes.json` | 28 |
+| 6 | **Personality Archetype Combo** (per character) | romance-archetypes | `artifacts/combos.json` | 153 |
 
-The personality combos are pair-wise compositions of **13 archetype foundations** (e.g. `aristocrat-noble + carefree-casual` → "Effortless Sovereign"). The 153 combos represent the full set of ordered pairings currently generated.
+The personality combos are pair-wise compositions of **13 archetype foundations** (e.g. `aristocrat-noble + carefree-casual` → "Effortless Sovereign"). The 153 combos represent the full set of ordered pairings currently generated. **Pairing** defaults to heterosexual (female protagonist + male love interest); `yaoi` makes both leads men and forces the Midnight Satin genre tag `Yaoi`.
 
 ### What each axis contributes
 
 ```
+Pairing              → WHO loves whom (het MF default, or yaoi / BL MM)
 World Setting        → WHERE the story takes place (zombie-apocalypse, epic-space-opera, small-fantasy-village…)
 Plot Function        → WHAT HAPPENS structurally (dungeon-adventure, the-long-journey, cinderella-story…)
 Romance Trope        → HOW the romance unfolds (enemies-to-lovers, fake-dating, boss-employee…)
@@ -174,10 +176,11 @@ Personality Combo    → HOW the characters behave and love (Effortless Sovereig
 
 ### Total combinatorial space
 
-A single romance story requires selecting: one world, one plot, one romance trope, and for **each** of the two lead characters, one character trope and one personality combo.
+A single romance story requires selecting: one pairing, one world, one plot, one romance trope, and for **each** of the two lead characters, one character trope and one personality combo.
 
 ```
-  World Settings           18
+  Pairing                   2
+× World Settings           18
 × Plot Functions           10
 × Romance Tropes           11
 × Character Trope (A)      28
@@ -185,32 +188,32 @@ A single romance story requires selecting: one world, one plot, one romance trop
 × Character Trope (B)      28
 × Personality Combo (B)   153
 ─────────────────────────────────
-= 36,351,022,080 unique configurations
+= 72,702,044,160 unique configurations
 ```
 
-**~36.35 billion** structurally distinct romance plots — before accounting for any narrative variation within each configuration.
+**~72.7 billion** structurally distinct romance plots — before accounting for any narrative variation within each configuration.
 
 ### Example configuration
 
 > A **boss-employee** romance with a **superheroes + mistaken-identity** plot in a **zombie-apocalypse** setting, featuring a **fortunately-unlucky** character paired with a **maid-butler** — where the first is a *Carefree Aristocrat* (`aristocrat-noble + carefree-casual`) chasing a *Secretive Noble* (`aristocrat-noble + secretive-enigma`).
 
-Each axis is independently authored and versioned, meaning adding a single new world setting (e.g. "haunted-carnival") would add **~2.02 billion** new configurations, and a single new character trope adds **~2.6 billion**.
+Each axis is independently authored and versioned, meaning adding a single new world setting (e.g. "haunted-carnival") would add **~4.04 billion** new configurations, and a single new character trope adds **~5.2 billion**.
 
 ### Growth model
 
 | Action | New configs added |
 |--------|------------------:|
-| +1 world setting | +2,019,501,227 |
-| +1 plot function | +3,635,102,208 |
-| +1 romance trope | +3,304,638,371 |
-| +1 character trope | +2,597,930,149 |
-| +1 personality combo | +475,407,360 |
+| +1 world setting | +4,039,002,453 |
+| +1 plot function | +7,270,204,416 |
+| +1 romance trope | +6,609,276,742 |
+| +1 character trope | +5,195,860,297 |
+| +1 personality combo | +950,814,720 |
 
 This multiplicative growth is the project's core strategic advantage: small, independently authored additions to any single axis produce billions of new story possibilities without requiring cross-axis coordination.
 
 ### Forced creativity (story-roulette → generate CLI)
 
-Smaller LLMs habitually pick *in-kind* stacks (fantasy world + magic school + teacher-student + prodigy + protective mentor). To break that habit, [`story-roulette/`](story-roulette/) randomizes the six axes and emits a ready-to-paste **romance-factory** command:
+Smaller LLMs habitually pick *in-kind* stacks (fantasy world + magic school + teacher-student + prodigy + protective mentor). To break that habit, [`story-roulette/`](story-roulette/) randomizes the seven axes (including pairing) and emits a ready-to-paste **romance-factory** command:
 
 ```bash
 python -m romance_factory.generate \
@@ -218,7 +221,8 @@ python -m romance_factory.generate \
   --plot the-long-journey \
   --trope fated-mates \
   --protagonist paranormal-fae steadfast-observer \
-  --love-interest secretly-demonlord wandering-shepherd
+  --love-interest secretly-demonlord wandering-shepherd \
+  --pairing yaoi
 ```
 
-Append `--llm-preset …` and `--story-path …` in the terminal. Personality dropdowns only offer combos that map to factory archetype slugs.
+Append `--llm-preset …` and `--story-path …` in the terminal. Personality dropdowns only offer combos that map to factory archetype slugs. `--pairing yaoi` is appended only when Yaoi is selected (het is the factory default).
