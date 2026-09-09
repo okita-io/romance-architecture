@@ -10,6 +10,7 @@
   --border: #4a2a55;
   --protagonist: #4d79ff;
   --love-interest: #ff4d8d;
+  --antagonist: #ff8c42;
   --radius: 12px;
 }
 
@@ -28,7 +29,7 @@ body {
 }
 
 .container {
-  max-width: 1100px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
 }
@@ -99,7 +100,13 @@ header h1 {
 }
 
 .grid-bottom {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+@media (max-width: 900px) {
+  .grid-bottom {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 700px) {
@@ -132,6 +139,10 @@ header h1 {
 
 .card.love-interest h3 {
   color: var(--love-interest);
+}
+
+.card.antagonist h3 {
+  color: var(--antagonist);
 }
 
 .card label {
@@ -237,7 +248,7 @@ header h1 {
   line-height: 1.7;
   white-space: pre-wrap;
   word-wrap: break-word;
-  max-height: 400px;
+  max-height: 560px;
   overflow-y: auto;
   margin-bottom: 1rem;
 }
