@@ -154,6 +154,25 @@
     }
   }
 
+  /** Under-dropdown hint: foundations + factory slugs (not the combo display name). */
+  function formatComboDescription(comboKey, { opposition } = {}) {
+    const [primary, secondary] = String(comboKey || '').split('+');
+    if (!primary || !secondary) return '';
+    const pSlug = FOUNDATION_TO_ARCHETYPE[primary];
+    const sSlug = FOUNDATION_TO_ARCHETYPE[secondary];
+    const parts = [
+      `Primary: ${prettifyKey(primary)}`,
+      pSlug ? `→ ${pSlug}` : '',
+      `· Secondary: ${prettifyKey(secondary)}`,
+      sSlug ? `→ ${sSlug}` : '',
+    ].filter(Boolean);
+    let text = parts.join(' ');
+    if (opposition) {
+      text += ' — how they oppose, not how they love.';
+    }
+    return text;
+  }
+
   function randomChoice(obj) {
     const keys = Object.keys(obj);
     return keys[Math.floor(Math.random() * keys.length)];
@@ -224,10 +243,9 @@
   });
 
   protagComboSelect.addEventListener('change', () => {
-    if (protagComboSelect.value) {
-      const name = PERSONALITY_COMBOS[protagComboSelect.value];
-      protagDesc.textContent = name ? `Personality: "${name}"` : '';
-    }
+    protagDesc.textContent = protagComboSelect.value
+      ? formatComboDescription(protagComboSelect.value)
+      : '';
   });
 
   loveTropeSelect.addEventListener('change', () => {
@@ -235,10 +253,9 @@
   });
 
   loveComboSelect.addEventListener('change', () => {
-    if (loveComboSelect.value) {
-      const name = PERSONALITY_COMBOS[loveComboSelect.value];
-      loveDesc.textContent = name ? `Personality: "${name}"` : '';
-    }
+    loveDesc.textContent = loveComboSelect.value
+      ? formatComboDescription(loveComboSelect.value)
+      : '';
   });
 
   antTropeSelect.addEventListener('change', () => {
@@ -246,10 +263,9 @@
   });
 
   antComboSelect.addEventListener('change', () => {
-    if (antComboSelect.value) {
-      const name = PERSONALITY_COMBOS[antComboSelect.value];
-      antDesc.textContent = name ? `Personality: "${name}" (how they oppose, not how they love)` : '';
-    }
+    antDesc.textContent = antComboSelect.value
+      ? formatComboDescription(antComboSelect.value, { opposition: true })
+      : 'First-class adversary. Trope is who they are; combo is how they oppose — not a third romantic lead.';
   });
 
   // --- Randomize ---
